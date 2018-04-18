@@ -93,6 +93,11 @@ public class BrokerStartup {
             }
 
             final BrokerConfig brokerConfig = new BrokerConfig();
+            // add 设置 rocketmq home。因为每台机器目录结构可能不一样，这里使用通用方式
+            String rocketMQHome = Thread.currentThread().getContextClassLoader().getResource("").getFile().replaceAll("file:", "").replaceAll("/broker/target/classes/", "");
+            brokerConfig.setRocketmqHome(rocketMQHome);
+            // add 设置 name server 地址
+            brokerConfig.setNamesrvAddr("localhost:9876");
             final NettyServerConfig nettyServerConfig = new NettyServerConfig();
             final NettyClientConfig nettyClientConfig = new NettyClientConfig();
             nettyServerConfig.setListenPort(10911);

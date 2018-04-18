@@ -70,6 +70,8 @@ public class NamesrvStartup {
             }
 
             final NamesrvConfig namesrvConfig = new NamesrvConfig();
+            // add 设置 rocketmq home
+            namesrvConfig.setRocketmqHome("/Users/iss/IdeaProjects/rocketmq");
             final NettyServerConfig nettyServerConfig = new NettyServerConfig();
             nettyServerConfig.setListenPort(9876);
             if (commandLine.hasOption('c')) {
