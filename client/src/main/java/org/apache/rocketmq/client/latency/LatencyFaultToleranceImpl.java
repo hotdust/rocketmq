@@ -29,6 +29,12 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
 
     private final ThreadLocalIndex whichItemWorst = new ThreadLocalIndex();
 
+    /**
+     * 每次发送完数据后，就会把被发送的 MessageQueue 的状态记录到 faultItemTable 里。
+     * @param name
+     * @param currentLatency
+     * @param notAvailableDuration
+     */
     @Override
     public void updateFaultItem(final String name, final long currentLatency, final long notAvailableDuration) {
         FaultItem old = this.faultItemTable.get(name);
@@ -72,14 +78,17 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
         }
 
         if (!tmpList.isEmpty()) {
+            // TODO Q: 2018/4/24 为什么又打乱，然后又排序？
             Collections.shuffle(tmpList);
 
+            // 这个排序是升序排序，把可用的、延迟小的排序在前面。
             Collections.sort(tmpList);
 
             final int half = tmpList.size() / 2;
+            // 如果只有一个元素，就取第一个元素。（如果没有元素，就不会进到上面 isEmpty 判断里了）
             if (half <= 0) {
                 return tmpList.get(0).getName();
-            } else {
+            } else { // 从 tmpList 的前一半里轮循取得一个元素。
                 final int i = this.whichItemWorst.getAndIncrement() % half;
                 return tmpList.get(i).getName();
             }
@@ -105,6 +114,14 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
             this.name = name;
         }
 
+
+        /**
+         * 按下面的规则，升序排序
+         * 可用性 > 延迟 > 开始可用时间
+         *
+         * @param other
+         * @return
+         */
         @Override
         public int compareTo(final FaultItem other) {
             if (this.isAvailable() != other.isAvailable()) {

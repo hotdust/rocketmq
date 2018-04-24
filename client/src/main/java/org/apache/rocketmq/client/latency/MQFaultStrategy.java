@@ -70,6 +70,8 @@ public class MQFaultStrategy {
                     }
                 }
 
+                // 选择一个比较好的 MessageQueue 返回。好的定义，请看 FaultItem compareTo 的实现。
+                // 第一次发送时，pickOneAtLeast 返回 null。
                 final String notBestBroker = latencyFaultTolerance.pickOneAtLeast();
                 int writeQueueNums = tpInfo.getQueueIdByBroker(notBestBroker);
                 if (writeQueueNums > 0) {
@@ -86,6 +88,8 @@ public class MQFaultStrategy {
                 log.error("Error occurred when selecting message queue", e);
             }
 
+            // 当 producer 第一次发送时，因为 pickOneAtLeast 返回 null 所以会走到这里。
+            // TODO Q: 2018/4/24 发生异常时，也会走到这里。什么时候会发生异常呢？
             return tpInfo.selectOneMessageQueue();
         }
 

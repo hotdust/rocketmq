@@ -108,6 +108,7 @@ public class MixAll {
     public static String brokerVIPChannel(final boolean isChange, final String brokerAddr) {
         if (isChange) {
             String[] ipAndPort = brokerAddr.split(":");
+            // TODO Q: 2018/4/24 为什么把 port - 2?
             String brokerAddrNew = ipAndPort[0] + ":" + (Integer.parseInt(ipAndPort[1]) - 2);
             return brokerAddrNew;
         } else {

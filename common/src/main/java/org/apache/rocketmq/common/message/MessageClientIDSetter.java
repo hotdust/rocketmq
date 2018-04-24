@@ -107,6 +107,7 @@ public class MessageClientIDSetter {
     }
 
     private static byte[] createUniqIDBuffer() {
+        // TODO Q: 2018/4/24 为什么要用 ByteBuffer 来生成UniqID？更快？
         ByteBuffer buffer = ByteBuffer.allocate(4 + 2);
         long current = System.currentTimeMillis();
         if (current >= nextStartTime) {
