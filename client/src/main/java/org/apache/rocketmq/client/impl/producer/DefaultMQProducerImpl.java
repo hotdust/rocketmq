@@ -141,9 +141,13 @@ public class DefaultMQProducerImpl implements MQProducerInner {
             case CREATE_JUST:
                 this.serviceState = ServiceState.START_FAILED;
 
+                // 对 producer group 名字进行 check
                 this.checkConfig();
 
                 if (!this.defaultMQProducer.getProducerGroup().equals(MixAll.CLIENT_INNER_PRODUCER_GROUP)) {
+                    // 修改 instance(就是Producer) 的名字。
+                    // 先从系统属性里取，看看设置没有设置名字。
+                    // 如果没有设置名字，默认是"DEFAULT"，要修改成当前进程 PID。
                     this.defaultMQProducer.changeInstanceNameToPID();
                 }
 
@@ -182,12 +186,16 @@ public class DefaultMQProducerImpl implements MQProducerInner {
     }
 
     private void checkConfig() throws MQClientException {
+
+        // 对 group名 进行 命名check
         Validators.checkGroup(this.defaultMQProducer.getProducerGroup());
 
+        // 这个 check 是否有用？上面的 check 已经包含了 null 的 check
         if (null == this.defaultMQProducer.getProducerGroup()) {
             throw new MQClientException("producerGroup is null", null);
         }
 
+        // group名 不能为默认的名字，如果是则需要修改。
         if (this.defaultMQProducer.getProducerGroup().equals(MixAll.DEFAULT_PRODUCER_GROUP)) {
             throw new MQClientException("producerGroup can not equal " + MixAll.DEFAULT_PRODUCER_GROUP + ", please specify another one.",
                 null);
