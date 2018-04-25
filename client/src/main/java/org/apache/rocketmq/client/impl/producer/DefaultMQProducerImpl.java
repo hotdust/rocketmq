@@ -151,8 +151,12 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                     this.defaultMQProducer.changeInstanceNameToPID();
                 }
 
+                // 生成一个 MQClientInstance
+                // TODO: 2018/4/25 这个 MQClientInstance 是干什么用的呢？
                 this.mQClientFactory = MQClientManager.getInstance().getAndCreateMQClientInstance(this.defaultMQProducer, rpcHook);
 
+                // 把 producer 保存到 mQClientFactory 中。保存时，每个一 producer group 对应
+                // 一个 producer
                 boolean registerOK = mQClientFactory.registerProducer(this.defaultMQProducer.getProducerGroup(), this);
                 if (!registerOK) {
                     this.serviceState = ServiceState.CREATE_JUST;
@@ -161,8 +165,14 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                         null);
                 }
 
+                // 添加一个 topic 信息
+                // TODO Q: 2018/4/25 为什么要添加这个，不添加行吗？
                 this.topicPublishInfoTable.put(this.defaultMQProducer.getCreateTopicKey(), new TopicPublishInfo());
 
+                // 为了防止死循环调用。
+                // 有一些地方调用 mQClientFactory.start()，而不调用 DefaultMQProducerImpl.start
+                // 而有一些地方调用 DefaultMQProducerImpl.start ，而不调用 DefaultMQProducerImpl.start
+                // 但两者都是要 start 的，所以要互相调用 start。为了防止死循环调用，用了下面的判断。
                 if (startFactory) {
                     mQClientFactory.start();
                 }

@@ -84,6 +84,7 @@ public class PullMessageService extends ServiceThread {
 
         while (!this.isStopped()) {
             try {
+                // TODO Q: 2018/4/25 pullRequestQueue 里的数据，是哪来的，找了半天感觉死循环了？
                 PullRequest pullRequest = this.pullRequestQueue.take();
                 if (pullRequest != null) {
                     this.pullMessage(pullRequest);

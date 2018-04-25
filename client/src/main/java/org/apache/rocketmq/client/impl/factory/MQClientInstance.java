@@ -221,18 +221,27 @@ public class MQClientInstance {
             switch (this.serviceState) {
                 case CREATE_JUST:
                     this.serviceState = ServiceState.START_FAILED;
+
                     // If not specified,looking address from name server
                     if (null == this.clientConfig.getNamesrvAddr()) {
+                        // 如果没有设置 name server 地址，就从系统属性"rocketmq.namesrv.domain"
+                        // 里取得地址，然后去连接 name server
+                        // TODO Q: 2018/4/25 为什么要取得 namer server 地址，取回来的是什么样的？
                         this.clientConfig.setNamesrvAddr(this.mQClientAPIImpl.fetchNameServerAddr());
                     }
+                    // 启动 MQClientAPIImpl。主要是启动 netty，准备进行数据传输。
                     // Start request-response channel
                     this.mQClientAPIImpl.start();
+                    // 启动各种定时任务
                     // Start various schedule tasks
                     this.startScheduledTask();
+                    // 启动 pull 任务，定时去 broker 取数据。
                     // Start pull service
                     this.pullMessageService.start();
+                    // todo 还没有细看。
                     // Start rebalance service
                     this.rebalanceService.start();
+                    // 启动 defaultMQProducer
                     // Start push service
                     this.defaultMQProducer.getDefaultMQProducerImpl().start(false);
                     log.info("the client factory [{}] start OK", this.clientId);
@@ -252,6 +261,7 @@ public class MQClientInstance {
 
     private void startScheduledTask() {
         if (null == this.clientConfig.getNamesrvAddr()) {
+            // 每 2 分钟去 取 name server 地址。
             this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
                 @Override
@@ -262,6 +272,7 @@ public class MQClientInstance {
                         log.error("ScheduledTask fetchNameServerAddr exception", e);
                     }
                 }
+//            }, 1000 * 10, 1000, TimeUnit.MILLISECONDS);
             }, 1000 * 10, 1000 * 60 * 2, TimeUnit.MILLISECONDS);
         }
 
@@ -270,6 +281,7 @@ public class MQClientInstance {
             @Override
             public void run() {
                 try {
+                    // 更新 producer 和 consumer 中的 topic 路由信息
                     MQClientInstance.this.updateTopicRouteInfoFromNameServer();
                 } catch (Exception e) {
                     log.error("ScheduledTask updateTopicRouteInfoFromNameServer exception", e);
@@ -282,7 +294,9 @@ public class MQClientInstance {
             @Override
             public void run() {
                 try {
+                    // 去掉不在线的 broker
                     MQClientInstance.this.cleanOfflineBroker();
+                    // 发送心跳 并且 上传filter类
                     MQClientInstance.this.sendHeartbeatToAllBrokerWithLock();
                 } catch (Exception e) {
                     log.error("ScheduledTask sendHeartbeatToAllBroker exception", e);
@@ -295,6 +309,7 @@ public class MQClientInstance {
             @Override
             public void run() {
                 try {
+                    // 上传 consumer offset
                     MQClientInstance.this.persistAllConsumerOffset();
                 } catch (Exception e) {
                     log.error("ScheduledTask persistAllConsumerOffset exception", e);
@@ -307,6 +322,7 @@ public class MQClientInstance {
             @Override
             public void run() {
                 try {
+                    // TODO Q: 2018/4/25 为什么要调整线程池
                     MQClientInstance.this.adjustThreadPool();
                 } catch (Exception e) {
                     log.error("ScheduledTask adjustThreadPool exception", e);
@@ -319,6 +335,10 @@ public class MQClientInstance {
         return clientId;
     }
 
+
+    /**
+     * 从 producer 和 consumer 集合里取得 topic 信息，然后更新 topic 的路由信息。
+     */
     public void updateTopicRouteInfoFromNameServer() {
         Set<String> topicList = new HashSet<String>();
 
@@ -405,9 +425,12 @@ public class MQClientInstance {
     }
 
     public void sendHeartbeatToAllBrokerWithLock() {
+        // TODO: 2018/4/25 这里为什么加锁？是为了防止其它线程执行这个方法，还是里面个别属性需要同步。
         if (this.lockHeartbeat.tryLock()) {
             try {
+                // 向所有 broker 发送心跳
                 this.sendHeartbeatToAllBroker();
+                // 上传 filter 类信息
                 this.uploadFilterClassSource();
             } catch (final Exception e) {
                 log.error("sendHeartbeatToAllBroker exception", e);
