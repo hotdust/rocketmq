@@ -22,11 +22,14 @@ import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
 /**
  * This class demonstrates how to send messages to brokers using provided {@link DefaultMQProducer}.
  */
 public class Producer {
-    public static void main(String[] args) throws MQClientException, InterruptedException {
+    public static void main(String[] args) throws MQClientException, InterruptedException, IOException {
 
         /*
          * Instantiate with a producer group name.
@@ -52,7 +55,15 @@ public class Producer {
         producer.setNamesrvAddr("localhost:9876");
         producer.start();
 
-        for (int i = 0; i < 1000; i++) {
+        // for test
+        TimeUnit.SECONDS.sleep(1);
+        DefaultMQProducer producer1 = new DefaultMQProducer("please_rename_unique_group_name1");
+        producer1.setNamesrvAddr("localhost:9876");
+        producer1.start();
+
+
+        for (int i = 0; i < 1; i++) {
+//        for (int i = 0; i < 1000; i++) {
             try {
 
                 /*
@@ -74,6 +85,10 @@ public class Producer {
                 Thread.sleep(1000);
             }
         }
+
+        // for test
+//        TimeUnit.MINUTES.sleep(10);
+        System.in.read();
 
         /*
          * Shut down once the producer instance is not longer in use.
