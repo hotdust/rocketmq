@@ -329,13 +329,21 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
     @Override
     public RemotingCommand invokeSync(String addr, final RemotingCommand request, long timeoutMillis)
         throws InterruptedException, RemotingConnectException, RemotingSendRequestException, RemotingTimeoutException {
+        // 取得 netty channel
         final Channel channel = this.getAndCreateChannel(addr);
+        // 如果 channel 可以使用
         if (channel != null && channel.isActive()) {
             try {
+
+                // 如果设置了 rpc 调用前置方法，就进行调用
                 if (this.rpcHook != null) {
                     this.rpcHook.doBeforeRequest(addr, request);
                 }
+
+                // 调用发送接口
                 RemotingCommand response = this.invokeSyncImpl(channel, request, timeoutMillis);
+
+                // 如果设置了 rpc 调用后置方法，就进行调用
                 if (this.rpcHook != null) {
                     this.rpcHook.doAfterResponse(RemotingHelper.parseChannelRemoteAddr(channel), request, response);
                 }

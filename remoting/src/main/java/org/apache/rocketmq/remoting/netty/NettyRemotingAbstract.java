@@ -262,19 +262,25 @@ public abstract class NettyRemotingAbstract {
 
     public RemotingCommand invokeSyncImpl(final Channel channel, final RemotingCommand request, final long timeoutMillis)
         throws InterruptedException, RemotingSendRequestException, RemotingTimeoutException {
+
+        // TODO: 2018/4/26 这个变量作用是什么？
         final int opaque = request.getOpaque();
 
         try {
+            // 新建一个 返回结果 对象
             final ResponseFuture responseFuture = new ResponseFuture(opaque, timeoutMillis, null, null);
             this.responseTable.put(opaque, responseFuture);
             final SocketAddress addr = channel.remoteAddress();
+            // 使用 channel 进行发送
             channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture f) throws Exception {
+                    // 如果发送成功，就直接返回
                     if (f.isSuccess()) {
                         responseFuture.setSendRequestOK(true);
                         return;
                     } else {
+                        // 发送不成功，就设置相关内容
                         responseFuture.setSendRequestOK(false);
                     }
 
@@ -285,7 +291,12 @@ public abstract class NettyRemotingAbstract {
                 }
             });
 
+            // 等待返回结果，如果在指定的超时时间内还没有结果返回，就继续向下走。
             RemotingCommand responseCommand = responseFuture.waitResponse(timeoutMillis);
+            // 如果 responseCmd 为空，就认为是没有返回，抛出异常。
+            // 这里 responseCmd 的值，是在 processResponseCommand 方法里设置的，
+            // 这个方法的调用，是在他的实现类 NettyRemotingClient 启动时，注册的一个 handler 里调用的。
+            // 这个 handler 就是接收处理返回来的结果的。
             if (null == responseCommand) {
                 if (responseFuture.isSendRequestOK()) {
                     throw new RemotingTimeoutException(RemotingHelper.parseSocketAddressAddr(addr), timeoutMillis,
@@ -295,8 +306,10 @@ public abstract class NettyRemotingAbstract {
                 }
             }
 
+            // 返回"返回结果"
             return responseCommand;
         } finally {
+            // 删除"结果集合"中的结果。
             this.responseTable.remove(opaque);
         }
     }

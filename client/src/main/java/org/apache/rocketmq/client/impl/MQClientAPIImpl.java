@@ -305,16 +305,20 @@ public class MQClientAPIImpl {
         final DefaultMQProducerImpl producer // 12
     ) throws RemotingException, MQBrokerException, InterruptedException {
         RemotingCommand request = null;
+
+        // 如果是设置 sendSmartMsg 条件，就使用 v2 版本的 header。
+        // v2 和 v1 相比，只是属性名字长度变短了，减少传输量。
         if (sendSmartMsg) {
-            // TODO Q: 2018/4/24 为什么要新使用一个 V2，和 V1 比有什么好处。
             SendMessageRequestHeaderV2 requestHeaderV2 = SendMessageRequestHeaderV2.createSendMessageRequestHeaderV2(requestHeader);
             request = RemotingCommand.createRequestCommand(RequestCode.SEND_MESSAGE_V2, requestHeaderV2);
         } else {
             request = RemotingCommand.createRequestCommand(RequestCode.SEND_MESSAGE, requestHeader);
         }
 
+        // 把要发送的消息体内容，设置到 request 中
         request.setBody(msg.getBody());
 
+        // 根据 通信Mode 进行调用同步、异步或 OneWay 方法
         switch (communicationMode) {
             case ONEWAY:
                 this.remotingClient.invokeOneway(addr, request, timeoutMillis);
@@ -325,6 +329,7 @@ public class MQClientAPIImpl {
                     retryTimesWhenSendFailed, times, context, producer);
                 return null;
             case SYNC:
+                // 同步发送
                 return this.sendMessageSync(addr, brokerName, msg, timeoutMillis, request);
             default:
                 assert false;
@@ -341,8 +346,10 @@ public class MQClientAPIImpl {
         final long timeoutMillis, //
         final RemotingCommand request//
     ) throws RemotingException, MQBrokerException, InterruptedException {
+        // 调用同步发送接口
         RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis);
         assert response != null;
+        // 组装 SendResult
         return this.processSendResponse(brokerName, msg, response);
     }
 
@@ -503,11 +510,14 @@ public class MQClientAPIImpl {
                         break;
                 }
 
+                // 解析 response 的 header
                 SendMessageResponseHeader responseHeader =
                     (SendMessageResponseHeader) response.decodeCommandCustomHeader(SendMessageResponseHeader.class);
 
+                // 根据发送的 msg，生成 MessageQueue
                 MessageQueue messageQueue = new MessageQueue(msg.getTopic(), brokerName, responseHeader.getQueueId());
 
+                // 根据 msg id、responseHeader id、上面生成的 MessageQueue、responseHeader的QueueOffset，生成 SendResult
                 SendResult sendResult = new SendResult(sendStatus,
                     MessageClientIDSetter.getUniqID(msg),
                     responseHeader.getMsgId(), messageQueue, responseHeader.getQueueOffset());
