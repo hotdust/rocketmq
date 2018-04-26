@@ -450,31 +450,41 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         final SendCallback sendCallback, //
         final long timeout//
     ) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        // 确认是否是 RUNNING 状态
         this.makeSureStateOK();
+        // 对发送内容进行 check
         Validators.checkMessage(msg, this.defaultMQProducer);
 
         final long invokeID = random.nextLong();
         long beginTimestampFirst = System.currentTimeMillis();
         long beginTimestampPrev = beginTimestampFirst;
         long endTimestamp = beginTimestampFirst;
+        // 取得 topic 相关的 TopicPublishInfo。每个 topic 第一次发送时，都去 name server 取得一下。
         TopicPublishInfo topicPublishInfo = this.tryToFindTopicPublishInfo(msg.getTopic());
         if (topicPublishInfo != null && topicPublishInfo.ok()) {
             MessageQueue mq = null;
             Exception exception = null;
             SendResult sendResult = null;
+            // 如果是同步发送，就取得发送重试次数
             int timesTotal = communicationMode == CommunicationMode.SYNC ? 1 + this.defaultMQProducer.getRetryTimesWhenSendFailed() : 1;
+            // 具体的发送次数
             int times = 0;
             String[] brokersSent = new String[timesTotal];
             for (; times < timesTotal; times++) {
                 String lastBrokerName = null == mq ? null : mq.getBrokerName();
+                // 选出一个 MessageQueue，向它发送消息（在发送次数限制内，每次发送失败，都再选择一次）
                 MessageQueue tmpmq = this.selectOneMessageQueue(topicPublishInfo, lastBrokerName);
                 if (tmpmq != null) {
                     mq = tmpmq;
+                    // 记录发送的 MessageQueue 的 broker 名字
                     brokersSent[times] = mq.getBrokerName();
                     try {
                         beginTimestampPrev = System.currentTimeMillis();
+                        // 调用发送消息的实际方法
                         sendResult = this.sendKernelImpl(msg, mq, communicationMode, sendCallback, topicPublishInfo, timeout);
                         endTimestamp = System.currentTimeMillis();
+                        // 发送完成后，更新接收消息的 broker 的状态。在上面的 selectOneMessageQueue 选择
+                        // MessageQueue 时，主要参考这个更新的内容。而更新的内容是"发送花费的总时间"
                         this.updateFaultItem(mq.getBrokerName(), endTimestamp - beginTimestampPrev, false);
                         switch (communicationMode) {
                             case ASYNC:
@@ -482,6 +492,9 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                             case ONEWAY:
                                 return null;
                             case SYNC:
+                                // 发送失败时候，判断是否要换一个 broker 发送。
+                                // 如果是，就把上面的过程再做一次；不是，就直接返回结果。
+                                // 这个可能是为了保证消息顺序
                                 if (sendResult.getSendStatus() != SendStatus.SEND_OK) {
                                     if (this.defaultMQProducer.isRetryAnotherBrokerWhenNotStoreOK()) {
                                         continue;
@@ -542,10 +555,12 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 }
             }
 
+            // 超过发送次数限制后，看发送结果是否为 null，如果不是就返回结果。
             if (sendResult != null) {
                 return sendResult;
             }
 
+            // 写 log，并抛出 exception
             String info = String.format("Send [%d] times, still failed, cost [%d]ms, Topic: %s, BrokersSent: %s",
                 times,
                 System.currentTimeMillis() - beginTimestampFirst,
@@ -568,6 +583,8 @@ public class DefaultMQProducerImpl implements MQProducerInner {
             throw mqClientException;
         }
 
+        // 如果走到这里，说明没有取得 topic 相关路由信息
+        // 下面就是抛出 exception
         List<String> nsList = this.getmQClientFactory().getMQClientAPIImpl().getNameServerAddressList();
         if (null == nsList || nsList.isEmpty()) {
             throw new MQClientException(
@@ -579,16 +596,22 @@ public class DefaultMQProducerImpl implements MQProducerInner {
     }
 
     private TopicPublishInfo tryToFindTopicPublishInfo(final String topic) {
+        // 从 TopicPublishInfo 集合里取得 topic 的 TopicPublishInfo
         TopicPublishInfo topicPublishInfo = this.topicPublishInfoTable.get(topic);
+        // 如果取不到 或 TopicPublishInfo 状态不对，就从 name server 取得 TopicPublishInfo
         if (null == topicPublishInfo || !topicPublishInfo.ok()) {
+            // 这里为什么放一个空的 TopicPublishInfo 进去？
+            // 可能是为了下面的 else，else 再从 name server 取得信息后，直接从集合里取出然后返回了，没有判断。
             this.topicPublishInfoTable.putIfAbsent(topic, new TopicPublishInfo());
             this.mQClientFactory.updateTopicRouteInfoFromNameServer(topic);
             topicPublishInfo = this.topicPublishInfoTable.get(topic);
         }
 
+        // 如果取得的 TopicPublishInfo 正常的话，就返回 TopicPublishInfo。
         if (topicPublishInfo.isHaveTopicRouterInfo() || topicPublishInfo.ok()) {
             return topicPublishInfo;
         } else {
+            // 如果还是不正常的话，就取得"默认Topic(TBW102)"的路由信息，向这个 topic 发送。
             this.mQClientFactory.updateTopicRouteInfoFromNameServer(topic, true, this.defaultMQProducer);
             topicPublishInfo = this.topicPublishInfoTable.get(topic);
             return topicPublishInfo;
@@ -601,7 +624,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         final SendCallback sendCallback, //
         final TopicPublishInfo topicPublishInfo, //
         final long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
-        // 取得 broker 地址
+        // 根据参数 MessageQueue，取得 broker 地址
         String brokerAddr = this.mQClientFactory.findBrokerAddressInPublish(mq.getBrokerName());
         if (null == brokerAddr) {
             // 如果没有取得到 broker 地址，再取得一次
@@ -612,7 +635,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         SendMessageContext context = null;
         if (brokerAddr != null) {
             // 是否使用broker vip通道。broker会开启两个端口对外服务。
-            // TODO: 2018/4/24 vip 通道的好处是什么？
+            // TODO Q: 2018/4/24 vip 通道的好处是什么？
             brokerAddr = MixAll.brokerVIPChannel(this.defaultMQProducer.isSendMessageWithVIPChannel(), brokerAddr);
 
             // 记录消息内容。下面逻辑可能改变消息内容，例如消息压缩。
@@ -668,6 +691,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                     this.executeSendMessageHookBefore(context);
                 }
 
+                // 设置 request header
                 SendMessageRequestHeader requestHeader = new SendMessageRequestHeader();
                 requestHeader.setProducerGroup(this.defaultMQProducer.getProducerGroup());
                 requestHeader.setTopic(msg.getTopic());

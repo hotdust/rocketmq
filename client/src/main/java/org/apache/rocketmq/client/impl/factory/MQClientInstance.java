@@ -559,11 +559,19 @@ public class MQClientInstance {
         }
     }
 
+    /**
+     * 从 name server 里取得 topic 路由信息。
+     * @param topic
+     * @param isDefault
+     * @param defaultMQProducer
+     * @return
+     */
     public boolean updateTopicRouteInfoFromNameServer(final String topic, boolean isDefault, DefaultMQProducer defaultMQProducer) {
         try {
             if (this.lockNamesrv.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 try {
                     TopicRouteData topicRouteData;
+                    // 根据参数判断，如果是想要取得"默认Topic"信息的话，就去取得"默认Topic"的路由信息。
                     if (isDefault && defaultMQProducer != null) {
                         topicRouteData = this.mQClientAPIImpl.getDefaultTopicRouteInfoFromNameServer(defaultMQProducer.getCreateTopicKey(),
                             1000 * 3);
@@ -575,8 +583,12 @@ public class MQClientInstance {
                             }
                         }
                     } else {
+                        // 否则取得相应的 topic 的路由信息
                         topicRouteData = this.mQClientAPIImpl.getTopicRouteInfoFromNameServer(topic, 1000 * 3);
                     }
+
+                    // 如果取得路由信息成功，判断新的路由信息 和 之前保证保存的 是否有改变。
+                    // 如果有改变，就更新 Broker、Producer、Consumer 的信息
                     if (topicRouteData != null) {
                         TopicRouteData old = this.topicRouteTable.get(topic);
                         boolean changed = topicRouteDataIsChange(old, topicRouteData);
