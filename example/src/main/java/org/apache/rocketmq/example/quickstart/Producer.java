@@ -53,6 +53,7 @@ public class Producer {
          */
         // add 设置 name server
         producer.setNamesrvAddr("localhost:9876");
+        producer.setSendLatencyFaultEnable(true);
         producer.start();
 
         // for test
@@ -62,7 +63,7 @@ public class Producer {
         producer1.start();
 
 
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < 2; i++) {
 //        for (int i = 0; i < 1000; i++) {
             try {
 
