@@ -24,10 +24,15 @@ import org.apache.rocketmq.common.protocol.route.QueueData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
 
 public class TopicPublishInfo {
+    // TODO Q: 2018/5/2 什么功能？
     private boolean orderTopic = false;
+    // 是否具有路由信息。看是否可用时，有的地方还使用它的 ok() 方法来判断。因为在 updateTopicRouteInfoFromNameServer 方法里设置 TopicPublishInfo 时，它没有判断 messageQueueList 就直接设置了 haveTopicRouterInfo，所以还需要使用 ok() 方法判断是否可用。
     private boolean haveTopicRouterInfo = false;
+    // 保存 topic 相关的 MessageQueue 的信息。
     private List<MessageQueue> messageQueueList = new ArrayList<MessageQueue>();
+    // 在轮循时，使用的 index 类。
     private volatile ThreadLocalIndex sendWhichQueue = new ThreadLocalIndex();
+    // 这个信息是所有的 queue 和 broker 信息。从这个信息，取得 topic 想要的信息。
     private TopicRouteData topicRouteData;
 
     public boolean isOrderTopic() {
