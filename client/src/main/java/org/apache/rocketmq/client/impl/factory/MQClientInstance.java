@@ -107,6 +107,7 @@ public class MQClientInstance {
     private final ClientRemotingProcessor clientRemotingProcessor;
     private final PullMessageService pullMessageService;
     private final RebalanceService rebalanceService;
+    // 主要是 consumer 向 broker 回传消息时使用
     private final DefaultMQProducer defaultMQProducer;
     private final ConsumerStatsManager consumerStatsManager;
     private final AtomicLong storeTimesTotal = new AtomicLong(0);

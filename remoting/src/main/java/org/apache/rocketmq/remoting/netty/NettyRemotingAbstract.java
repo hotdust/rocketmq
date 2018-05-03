@@ -320,6 +320,8 @@ public abstract class NettyRemotingAbstract {
         final int opaque = request.getOpaque();
         boolean acquired = this.semaphoreAsync.tryAcquire(timeoutMillis, TimeUnit.MILLISECONDS);
         if (acquired) {
+            // 这个类的作用，从名字上看是"只释放一次"。从代码上看，下面的两个 SemaphoreReleaseOnlyOnce
+            // 在一次执行过程中，可能都会被执行，所以使用这种方式？
             final SemaphoreReleaseOnlyOnce once = new SemaphoreReleaseOnlyOnce(this.semaphoreAsync);
 
             final ResponseFuture responseFuture = new ResponseFuture(opaque, timeoutMillis, invokeCallback, once);
@@ -328,6 +330,8 @@ public abstract class NettyRemotingAbstract {
                 channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture f) throws Exception {
+                        // 为什么成功后，就直接返回了？不调用 callback 方法了？
+                        // 如果不调用 callback 的话，send 的后置方法如何调用？
                         if (f.isSuccess()) {
                             responseFuture.setSendRequestOK(true);
                             return;
