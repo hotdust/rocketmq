@@ -39,6 +39,7 @@ public class MappedFileQueue {
 
     private final int mappedFileSize;
 
+    // TODO Q: 2018/5/3 为什么要使用 CopyOnWriteArrayList 类型？
     private final CopyOnWriteArrayList<MappedFile> mappedFiles = new CopyOnWriteArrayList<MappedFile>();
 
     private final AllocateMappedFileService allocateMappedFileService;

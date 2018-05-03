@@ -142,6 +142,7 @@ public abstract class NettyRemotingAbstract {
                 }
             };
 
+            // 如果系统繁忙，拒绝请求
             if (pair.getObject1().rejectRequest()) {
                 final RemotingCommand response = RemotingCommand.createResponseCommand(RemotingSysResponseCode.SYSTEM_BUSY,
                     "[REJECTREQUEST]system busy, start flow control for a while");

@@ -153,6 +153,7 @@ public class BrokerStartup {
             if (null != namesrvAddr) {
                 try {
                     String[] addrArray = namesrvAddr.split(";");
+                    // 确认 name server 地址是否能连接上。连接不上就抛出 exception。
                     for (String addr : addrArray) {
                         RemotingUtil.string2SocketAddress(addr);
                     }
