@@ -567,6 +567,7 @@ public class CommitLog {
         MappedFile unlockMappedFile = null;
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
 
+        // TODO Q: 2018/5/4 看看这个方法，这个方法里有意思，可以使用锁，也可以不使用锁。
         lockForPutMessage(); //spin...
         try {
             long beginLockTimestamp = this.defaultMessageStore.getSystemClock().now();

@@ -442,6 +442,7 @@ public class RemotingCommand {
         return (this.flag & bits) == bits;
     }
 
+    // header 是 v1 还是 v2 版本。
     public int getCode() {
         return code;
     }
