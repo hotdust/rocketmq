@@ -148,6 +148,7 @@ public class Message implements Serializable {
     }
 
     public void setWaitStoreMsgOK(boolean waitStoreMsgOK) {
+        // TODO Q: 18/5/5 这个属性是干什么的？
         this.putProperty(MessageConst.PROPERTY_WAIT_STORE_MSG_OK, Boolean.toString(waitStoreMsgOK));
     }
 

@@ -148,7 +148,7 @@ public class MappedFile extends ReferenceResource {
 
     private void init(final String fileName, final int fileSize) throws IOException {
         this.fileName = fileName;
-        this.fileSize = fileSize;
+        this.fileSize = fileSize; // 这个 size 是由 MessageStoreConfig.mapedFileSizeCommitLog 属性设置的
         this.file = new File(fileName);
         this.fileFromOffset = Long.parseLong(this.file.getName());
         boolean ok = false;
@@ -192,8 +192,15 @@ public class MappedFile extends ReferenceResource {
 
         int currentPos = this.wrotePosition.get();
 
+
+        // TODO Q: 18/5/5 如何对应多线程？还是接收消息都是单线程的？
         if (currentPos < this.fileSize) {
+            // 当 writeBuffer 不为空时，使用 FileChannel 写文件，否则用 mappedByteBuffer 所映射的文件中。
+            // TODO Q: 18/5/5 为什么使用两种式？不使用一种？
+            // 通过 slice 将剩余空间给 bytebuffer。bytebuffer 取得的是剩余空间的地址。
             ByteBuffer byteBuffer = writeBuffer != null ? writeBuffer.slice() : this.mappedByteBuffer.slice();
+            // TODO Q: 旧的 buffer 的 position 不变，取得的 slice 还是和上回相同的 slice 空间，应该是在这里设置 slice position
+            // 防止覆盖前面的 slice 写的内容。
             byteBuffer.position(currentPos);
             AppendMessageResult result =
                 cb.doAppend(this.getFileFromOffset(), byteBuffer, this.fileSize - currentPos, msg);
