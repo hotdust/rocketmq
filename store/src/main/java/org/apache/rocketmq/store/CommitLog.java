@@ -626,6 +626,7 @@ public class CommitLog {
         }
 
         if (null != unlockMappedFile && this.defaultMessageStore.getMessageStoreConfig().isWarmMapedFileEnable()) {
+            // TODO Q: 18/5/10 这个是干什么用的？
             this.defaultMessageStore.unlockMappedFile(unlockMappedFile);
         }
 
@@ -1027,6 +1028,7 @@ public class CommitLog {
                         }
                     }
 
+                    // 刷新完了，告诉等待线程可以继续。（同步刷盘在向 list 里放入要落盘消息后，就进入等待）
                     req.wakeupCustomer(flushOK);
                 }
 
@@ -1180,6 +1182,7 @@ public class CommitLog {
                 // 1 TOTALSIZE
                 this.msgStoreItemMemory.putInt(maxBlank);
                 // 2 MAGICCODE
+                // TODO Q: 18/5/10 这个 BLANK_MAGIC_CODE 是干什么用的？
                 this.msgStoreItemMemory.putInt(CommitLog.BLANK_MAGIC_CODE);
                 // 3 The remaining space may be any value
                 //
