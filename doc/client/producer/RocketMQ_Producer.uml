@@ -21,58 +21,6 @@
       <point x="0.0" y="-14.5" />
       <point x="0.0" y="14.5" />
     </edge>
-    <edge source="org.apache.rocketmq.client.impl.MQClientAPIImpl" target="org.apache.rocketmq.client.ClientConfig">
-      <point x="63.25" y="-48.0" />
-      <point x="844.4745670995671" y="322.0" />
-      <point x="868.5162337662338" y="322.0" />
-      <point x="-206.66666666666663" y="136.0" />
-    </edge>
-    <edge source="org.apache.rocketmq.client.impl.producer.TopicPublishInfo" target="org.apache.rocketmq.common.protocol.route.TopicRouteData">
-      <point x="117.66666666666669" y="-69.5" />
-      <point x="419.6666666666667" y="322.0" />
-      <point x="536.849567099567" y="322.0" />
-      <point x="-83.33333333333337" y="58.5" />
-    </edge>
-    <edge source="org.apache.rocketmq.client.producer.DefaultMQProducer" target="org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl">
-      <point x="-77.28571428571428" y="-168.5" />
-      <point x="395.95075757575756" y="1107.0" />
-      <point x="340.0" y="1107.0" />
-      <point x="0.0" y="113.5" />
-    </edge>
-    <edge source="org.apache.rocketmq.client.impl.producer.TopicPublishInfo" target="org.apache.rocketmq.common.message.MessageQueue">
-      <point x="-117.66666666666669" y="-69.5" />
-      <point x="184.33333333333331" y="322.0" />
-      <point x="293.18290043290045" y="322.0" />
-      <point x="-78.0" y="47.5" />
-    </edge>
-    <edge source="org.apache.rocketmq.client.impl.MQClientAPIImpl" target="org.apache.rocketmq.common.message.MessageQueue">
-      <point x="-63.25" y="-48.0" />
-      <point x="717.9745670995671" y="302.0" />
-      <point x="449.18290043290045" y="302.0" />
-      <point x="78.0" y="47.5" />
-    </edge>
-    <edge source="org.apache.rocketmq.client.impl.factory.MQClientInstance" target="org.apache.rocketmq.common.message.MessageQueue">
-      <point x="-90.57142857142867" y="-124.5" />
-      <point x="601.3406385281385" y="511.0" />
-      <point x="489.0" y="511.0" />
-      <point x="489.0" y="312.0" />
-      <point x="397.18290043290045" y="312.0" />
-      <point x="26.0" y="47.5" />
-    </edge>
-    <edge source="org.apache.rocketmq.client.impl.factory.MQClientInstance" target="org.apache.rocketmq.client.impl.producer.TopicPublishInfo">
-      <point x="-135.8571428571429" y="-124.5" />
-      <point x="556.0549242424242" y="521.0" />
-      <point x="434.375" y="521.0" />
-      <point x="132.375" y="69.5" />
-    </edge>
-    <edge source="org.apache.rocketmq.client.impl.factory.MQClientInstance" target="org.apache.rocketmq.client.producer.DefaultMQProducer">
-      <point x="105.66666666666676" y="124.5" />
-      <point x="797.5787337662339" y="815.0" />
-      <point x="702.9120670995671" y="815.0" />
-      <point x="702.9120670995671" y="1097.0" />
-      <point x="627.8079004329004" y="1097.0" />
-      <point x="154.57142857142856" y="-168.5" />
-    </edge>
     <edge source="org.apache.rocketmq.client.producer.DefaultMQProducer" target="org.apache.rocketmq.client.ClientConfig">
       <point x="231.8571428571429" y="-168.5" />
       <point x="705.0936147186147" y="1107.0" />
@@ -81,56 +29,14 @@
       <point x="1281.8495670995671" y="322.0" />
       <point x="206.66666666666674" y="136.0" />
     </edge>
-    <edge source="org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl" target="org.apache.rocketmq.client.impl.producer.TopicPublishInfo">
-      <point x="-48.75" y="-113.5" />
-      <point x="291.25" y="815.0" />
-      <point x="298.7378246753247" y="815.0" />
-      <point x="298.7378246753247" y="521.0" />
-      <point x="257.875" y="521.0" />
-      <point x="-44.125" y="69.5" />
-    </edge>
     <edge source="org.apache.rocketmq.client.producer.DefaultMQProducer" target="org.apache.rocketmq.client.producer.MQProducer">
       <point x="-231.85714285714283" y="-168.5" />
       <point x="241.379329004329" y="1107.0" />
       <point x="62.5" y="1107.0" />
       <point x="0.0" y="14.5" />
     </edge>
-    <edge source="org.apache.rocketmq.client.impl.factory.MQClientInstance" target="org.apache.rocketmq.client.ClientConfig">
-      <point x="135.8571428571429" y="-124.5" />
-      <point x="827.76920995671" y="521.0" />
-      <point x="1059.7563582251082" y="521.0" />
-      <point x="1059.7563582251082" y="322.0" />
-      <point x="1075.1829004329004" y="322.0" />
-      <point x="0.0" y="136.0" />
-    </edge>
-    <edge source="org.apache.rocketmq.client.impl.factory.MQClientInstance" target="org.apache.rocketmq.client.impl.MQClientAPIImpl">
-      <point x="0.0" y="-124.5" />
-      <point x="691.9120670995671" y="521.0" />
-      <point x="717.9745670995671" y="521.0" />
-      <point x="-63.25" y="48.0" />
-    </edge>
-    <edge source="org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl" target="org.apache.rocketmq.client.impl.factory.MQClientInstance">
-      <point x="146.25" y="-113.5" />
-      <point x="486.25" y="815.0" />
-      <point x="586.2454004329005" y="815.0" />
-      <point x="-105.66666666666663" y="124.5" />
-    </edge>
-    <edge source="org.apache.rocketmq.client.impl.factory.MQClientInstance" target="org.apache.rocketmq.common.protocol.route.TopicRouteData">
-      <point x="90.57142857142857" y="-124.5" />
-      <point x="782.4834956709957" y="511.0" />
-      <point x="918.2245670995671" y="511.0" />
-      <point x="918.2245670995671" y="292.0" />
-      <point x="703.5162337662337" y="292.0" />
-      <point x="83.33333333333326" y="58.5" />
-    </edge>
-    <edge source="org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl" target="org.apache.rocketmq.client.producer.DefaultMQProducer">
-      <point x="130.0" y="113.5" />
-      <point x="470.0" y="1107.0" />
-      <point x="473.23647186147184" y="1107.0" />
-      <point x="0.0" y="-168.5" />
-    </edge>
   </edges>
-  <settings layout="Hierarchic Group" zoom="0.4757412398921833" x="853.8583569405098" y="772.0" />
+  <settings layout="Hierarchic Group" zoom="0.4757412398921833" x="854.0" y="772.0" />
   <SelectedNodes />
   <Categories>
     <Category>Fields</Category>

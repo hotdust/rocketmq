@@ -108,6 +108,7 @@ public class RunningFlags {
         return false;
     }
 
+    // 这个方法是系统设置 disk full 的地方，如果再提示
     public boolean getAndMakeDiskFull() {
         boolean result = !((this.flagBits & DISK_FULL_BIT) == DISK_FULL_BIT);
         this.flagBits |= DISK_FULL_BIT;
