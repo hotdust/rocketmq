@@ -23,6 +23,7 @@ public class AppendMessageResult {
     // Return code
     private AppendMessageStatus status;
     // Where to start writing
+    // TODO: 2018/5/10 这个的作用是什么？
     private long wroteOffset;
     // Write Bytes
     private int wroteBytes;

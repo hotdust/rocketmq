@@ -46,6 +46,7 @@ public class MappedFile extends ReferenceResource {
     private static final AtomicLong TOTAL_MAPPED_VIRTUAL_MEMORY = new AtomicLong(0);
 
     private static final AtomicInteger TOTAL_MAPPED_FILES = new AtomicInteger(0);
+    // 记录当前这个文件写到第几个字节了。例如：一个 10 字节的文件，这个是3的话，说明写到第3个字节了。
     protected final AtomicInteger wrotePosition = new AtomicInteger(0);
     //ADD BY ChenYang
     protected final AtomicInteger committedPosition = new AtomicInteger(0);
@@ -58,6 +59,9 @@ public class MappedFile extends ReferenceResource {
     protected ByteBuffer writeBuffer = null;
     protected TransientStorePool transientStorePool = null;
     private String fileName;
+    // 距离上一个文件的 offset
+    // 假如 commit log 有3个文件：00000000000000000000、00000000000000524288、00000000000001048576
+    // 00000000000001048576 这个文件是正在写的文件，那么 fileFromOffset 就是 524288。
     private long fileFromOffset;
     private File file;
     private MappedByteBuffer mappedByteBuffer;
@@ -193,10 +197,15 @@ public class MappedFile extends ReferenceResource {
         int currentPos = this.wrotePosition.get();
 
         if (currentPos < this.fileSize) {
+            // 取得 file 中，剩余部分的 buffer
             ByteBuffer byteBuffer = writeBuffer != null ? writeBuffer.slice() : this.mappedByteBuffer.slice();
+            // 为什么要设置 currentPos？ slice()后的 buffer 是从剩余部分开始的，position 前的部分都不包含呀。
+            // 因为没有单独使用过 上面两个 buffer 单独进行过 put 操作，都是 slice 后的引用进行 put，
+            // 所以，position 一起都是 0。对于 position，是使用手动进行记录 position 位置的：wrotePosition。
             byteBuffer.position(currentPos);
             AppendMessageResult result =
                 cb.doAppend(this.getFileFromOffset(), byteBuffer, this.fileSize - currentPos, msg);
+            // 使用 message 的字符数，更新 wrotePosition，记录下次开始写的位置。
             this.wrotePosition.addAndGet(result.getWroteBytes());
             this.storeTimestamp = result.getStoreTimestamp();
             return result;

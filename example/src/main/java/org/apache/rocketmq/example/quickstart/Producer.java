@@ -63,7 +63,7 @@ public class Producer {
         producer1.start();
 
 
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 10; i++) {
 //        for (int i = 0; i < 1000; i++) {
             try {
 
@@ -83,13 +83,13 @@ public class Producer {
                 System.out.printf("%s%n", sendResult);
             } catch (Exception e) {
                 e.printStackTrace();
-                Thread.sleep(1000);
+//                Thread.sleep(1000);
             }
         }
 
         // for test
 //        TimeUnit.MINUTES.sleep(10);
-        System.in.read();
+//        System.in.read();
 
         /*
          * Shut down once the producer instance is not longer in use.
