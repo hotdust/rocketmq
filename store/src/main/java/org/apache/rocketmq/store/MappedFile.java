@@ -321,17 +321,20 @@ public class MappedFile extends ReferenceResource {
         int flush = this.flushedPosition.get();
         int write = getReadPosition();
 
+        // 如果 buffer 写满了，就刷盘，不管其它条件
         if (this.isFull()) {
             return true;
         }
 
-        // 如果 还没有刷盘的消息页数 >=  最小刷盘页数限制（flushLeastPages * 4096），就刷盘。
+
+        // 如果设置了"最小刷盘页数限制"， 并且还没有刷盘的消息页数 >=  最小刷盘页数限制（flushLeastPages * 4096），就刷盘。
         // write / OS_PAGE_SIZE：已经写入的消息的页数
         // flush / OS_PAGE_SIZE：已经刷盘的消息页数
         if (flushLeastPages > 0) {
             return ((write / OS_PAGE_SIZE) - (flush / OS_PAGE_SIZE)) >= flushLeastPages;
         }
 
+        // 如果没有上面条件的话，并且有没有落盘的消息的话，就刷盘。
         return write > flush;
     }
 
