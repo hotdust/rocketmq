@@ -423,9 +423,11 @@ public class MappedFileQueue {
 
     public boolean flush(final int flushLeastPages) {
         boolean result = true;
+        // 取得应该写入的 mappedFile
         MappedFile mappedFile = this.findMappedFileByOffset(this.flushedWhere, false);
         if (mappedFile != null) {
             long tmpTimeStamp = mappedFile.getStoreTimestamp();
+            // mappedFile 进行刷盘
             int offset = mappedFile.flush(flushLeastPages);
             long where = mappedFile.getFileFromOffset() + offset;
             result = where == this.flushedWhere;
@@ -454,12 +456,24 @@ public class MappedFileQueue {
     /**
      * Finds a mapped file by offset.
      *
+     * 假设：
+     现在有两个文件：00000000000000000000、00000000000000524288。
+     offset: 734297 （第二个文件名 + 已经写入的消息位置）
+     mappedFileSize: 524288（每个文件的大小）
+     mappedFile.getFileFromOffset(): 0 （因为第一个文件名就是 0）
+
+     那么：
+     (offset / this.mappedFileSize) = 1
+     (mappedFile.getFileFromOffset() / this.mappedFileSize) = 0
+     index = 1 - 0 = 1
+     *
      * @param offset Offset.
      * @param returnFirstOnNotFound If the mapped file is not found, then return the first one.
      * @return Mapped file or null (when not found and returnFirstOnNotFound is <code>false</code>).
      */
     public MappedFile findMappedFileByOffset(final long offset, final boolean returnFirstOnNotFound) {
         try {
+            // 取得 mappedFiles 里第一个文件，也就是文件名最小的文件。
             MappedFile mappedFile = this.getFirstMappedFile();
             if (mappedFile != null) {
                 int index = (int) ((offset / this.mappedFileSize) - (mappedFile.getFileFromOffset() / this.mappedFileSize));

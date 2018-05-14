@@ -139,7 +139,7 @@ public class CountDownLatch2 {
 
     public void reset() {
         sync.reset();
-    }
+     }
 
     /**
      * Returns a string identifying this latch, as well as its state.
@@ -156,6 +156,7 @@ public class CountDownLatch2 {
      * Synchronization control For CountDownLatch2.
      * Uses AQS state to represent count.
      */
+    // TODO Q: 2018/5/11 看看这个类的作用和好处。这个类和 CountDownLatch 类基本一样，多个 reset 方法。
     private static final class Sync extends AbstractQueuedSynchronizer {
         private static final long serialVersionUID = 4982264981922014374L;
 
@@ -186,6 +187,9 @@ public class CountDownLatch2 {
             }
         }
 
+        // reset方法是为了恢复初始化状态。
+        // 因为原始的 CountDownLatch 在使用一次后就不能使用了，为了能重复使用，新加了一个 reset 方法。
+        // 把状态设置成初始状态，这样 await 又可以使用了。
         protected void reset() {
             setState(startCount);
         }

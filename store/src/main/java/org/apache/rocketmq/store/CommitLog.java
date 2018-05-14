@@ -153,6 +153,15 @@ public class CommitLog {
 
     /**
      * When the normal exit, data recovery, all memory data have been flush
+     *
+     * 从 commit log 文件夹里的读取文件，恢复数据。
+     * 主要恢复的是 mappedFileQueue 的
+     *  - FlushedWhere：这个值是为了取得数据写到的位置，写数据时要一个消息在所有的文件中整体的位置。
+     *   （可能是在重复取得消息时，要根据这个值？？）
+     *    这个值是根据最后文件的文件名的值 + 最后的文件所有消息的大小
+     *    例如：最后的文件名为"00000000000000524288"。消息有200条，每条110个字节，那大小就是 22000。
+     *    FlushedWhere = 524288 + 22000。
+     *  - CommittedWhere
      */
     public void recoverNormally() {
         boolean checkCRCOnRecover = this.defaultMessageStore.getMessageStoreConfig().isCheckCRCOnRecover();
@@ -638,12 +647,16 @@ public class CommitLog {
 
         GroupCommitRequest request = null;
 
+        // 进行刷盘
         // Synchronization flush
         if (FlushDiskType.SYNC_FLUSH == this.defaultMessageStore.getMessageStoreConfig().getFlushDiskType()) {
             final GroupCommitService service = (GroupCommitService) this.flushCommitLogService;
+            // TODO Q: 2018/5/11 这个属性是做什么的呢？
             if (msg.isWaitStoreMsgOK()) {
                 request = new GroupCommitRequest(result.getWroteOffset() + result.getWroteBytes());
+                // 向同步刷盘线程发送要落盘的消息
                 service.putRequest(request);
+                // 等待消息落盘完成
                 boolean flushOK = request.waitForFlush(this.defaultMessageStore.getMessageStoreConfig().getSyncFlushTimeout());
                 if (!flushOK) {
                     log.error("do groupcommit, wait for flush failed, topic: " + msg.getTopic() + " tags: " + msg.getTags()
@@ -656,6 +669,7 @@ public class CommitLog {
         }
         // Asynchronous flush
         else {
+            // TODO Q: 2018/5/11 为什么异步刷盘时，要判断是不是 isTransientStorePoolEnable，根据这个来判断选用启动哪个 service 呢？
             if (!this.defaultMessageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
                 flushCommitLogService.wakeup();
             } else {
@@ -918,11 +932,15 @@ public class CommitLog {
             CommitLog.log.info(this.getServiceName() + " service started");
 
             while (!this.isStopped()) {
+                // 是否是定时刷盘
                 boolean flushCommitLogTimed = CommitLog.this.defaultMessageStore.getMessageStoreConfig().isFlushCommitLogTimed();
 
+                // 取得刷盘最小间隔时间
                 int interval = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getFlushIntervalCommitLog();
+                // 取得刷盘最小页数
                 int flushPhysicQueueLeastPages = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getFlushCommitLogLeastPages();
 
+                // Message Queue 的刷盘国间隔？
                 int flushPhysicQueueThoroughInterval =
                     CommitLog.this.defaultMessageStore.getMessageStoreConfig().getFlushCommitLogThoroughInterval();
 
@@ -937,9 +955,12 @@ public class CommitLog {
                 }
 
                 try {
+                    // 如果是定时刷盘，就睡"刷盘最小间隔时间"这么长时间，然后进行刷盘。
+                    // TODO Q: 2018/5/11 是用这种方式实现定时刷盘的？
                     if (flushCommitLogTimed) {
                         Thread.sleep(interval);
                     } else {
+                        // TODO Q: 2018/5/11 这个的目的是什么？
                         this.waitForRunning(interval);
                     }
 
@@ -1007,7 +1028,8 @@ public class CommitLog {
             }
         }
 
-        // TODO Q: 18/5/5 为什么要 SWAP？有什么好处？
+        // 使用两个队列进行处理消息。
+        // 在等待时，使用 requestsWrite 接收消息。当可以处理消息刷盘后，就把 requestsWrite 和 requestsRead 引用互换，刷盘处理从 requestsRead 里读取要刷盘的消息，进行刷盘。刷盘时，如果有消息进来，就向 requestsWrite 里写消息。等再到可以刷盘时，再对新进来的消息进行刷盘。
         private void swapRequests() {
             List<GroupCommitRequest> tmp = this.requestsWrite;
             this.requestsWrite = this.requestsRead;
@@ -1021,8 +1043,10 @@ public class CommitLog {
                     // two times the flush
                     boolean flushOK = false;
                     for (int i = 0; i < 2 && !flushOK; i++) {
+                        // 判断 mappedFileQueue 中文件刷完盘的位置(FlushedWhere) >= 消息的最后位置的话，说明这个消息已经落盘了（因为消息是多次写到 buffer 中的，但一次刷盘就可以把消息都落盘）
                         flushOK = CommitLog.this.mappedFileQueue.getFlushedWhere() >= req.getNextOffset();
 
+                        // 如果消息还没有落盘，就进行刷盘
                         if (!flushOK) {
                             CommitLog.this.mappedFileQueue.flush(0);
                         }

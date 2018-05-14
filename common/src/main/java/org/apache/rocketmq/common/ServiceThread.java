@@ -28,6 +28,9 @@ public abstract class ServiceThread implements Runnable {
 
     protected final Thread thread;
     protected final CountDownLatch2 waitPoint = new CountDownLatch2(1);
+    // 这个状态主要是被 GroupCommitService 使用，是用来表示是否还需要进行等待一段时间。
+    // 如果为 true，说明是有消息进来了，就不需要等待了，应该进行刷盘操作。
+    // 如果为 false，则说明没有消息进行，等待一段时间后，再进行刷盘操作。
     protected volatile AtomicBoolean hasNotified = new AtomicBoolean(false);
     protected volatile boolean stopped = false;
 
@@ -103,11 +106,17 @@ public abstract class ServiceThread implements Runnable {
     }
 
     protected void waitForRunning(long interval) {
+        // 如果有消息进来
         if (hasNotified.compareAndSet(true, false)) {
+            // 交换处理队列
             this.onWaitEnd();
+            // 直接返回，进行后续操作，就不进行等待一段时间了。
             return;
         }
 
+        // reset方法是为了恢复初始化状态。
+        // 因为原始的 CountDownLatch 在使用一次后就不能使用了，为了能重复使用，新加了一个 reset 方法。
+        // 把状态设置成初始状态，这样 await 又可以使用了。
         //entry to wait
         waitPoint.reset();
 
@@ -116,7 +125,9 @@ public abstract class ServiceThread implements Runnable {
         } catch (InterruptedException e) {
             e.printStackTrace();
         } finally {
+            // 超过等待时间后，恢复 hasNotified 状态为没有消息进入状态。
             hasNotified.set(false);
+            // 交换处理队列
             this.onWaitEnd();
         }
     }

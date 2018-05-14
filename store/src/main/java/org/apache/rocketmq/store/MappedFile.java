@@ -246,10 +246,11 @@ public class MappedFile extends ReferenceResource {
     }
 
     /**
-     * @param flushLeastPages
+     * @param flushLeastPages 刷盘时的页数限制。大于这个页数的话，就可以进行刷盘。
      * @return The current flushed position
      */
     public int flush(final int flushLeastPages) {
+        // 首先判断是否可以刷盘
         if (this.isAbleToFlush(flushLeastPages)) {
             if (this.hold()) {
                 int value = getReadPosition();
@@ -324,6 +325,9 @@ public class MappedFile extends ReferenceResource {
             return true;
         }
 
+        // 如果 还没有刷盘的消息页数 >=  最小刷盘页数限制（flushLeastPages * 4096），就刷盘。
+        // write / OS_PAGE_SIZE：已经写入的消息的页数
+        // flush / OS_PAGE_SIZE：已经刷盘的消息页数
         if (flushLeastPages > 0) {
             return ((write / OS_PAGE_SIZE) - (flush / OS_PAGE_SIZE)) >= flushLeastPages;
         }
@@ -459,6 +463,7 @@ public class MappedFile extends ReferenceResource {
      * @return The max position which have valid data
      */
     public int getReadPosition() {
+        // 如果 this.writeBuffer == null，就是同步刷盘，否则是异步、并使用 committedPosition 方式的刷盘。
         return this.writeBuffer == null ? this.wrotePosition.get() : this.committedPosition.get();
     }
 
