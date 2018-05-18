@@ -145,6 +145,7 @@ public class MappedFile extends ReferenceResource {
     }
 
     public void init(final String fileName, final int fileSize, final TransientStorePool transientStorePool) throws IOException {
+        // TODO Q: 2018/5/17 使用 writeBuffer 时候，为什么也创建 mappedByteBuffer？
         init(fileName, fileSize);
         this.writeBuffer = transientStorePool.borrowBuffer();
         this.transientStorePool = transientStorePool;
@@ -252,21 +253,26 @@ public class MappedFile extends ReferenceResource {
     public int flush(final int flushLeastPages) {
         // 首先判断是否可以刷盘
         if (this.isAbleToFlush(flushLeastPages)) {
+            // 判断此 MappedFile 是否还可以使用。通过引用计数的方式来确认是否可以使用。
             if (this.hold()) {
                 int value = getReadPosition();
 
                 try {
                     //We only append data to fileChannel or mappedByteBuffer, never both.
+                    // 异步刷盘
                     if (writeBuffer != null || this.fileChannel.position() != 0) {
                         this.fileChannel.force(false);
                     } else {
+                        // 同步刷盘
                         this.mappedByteBuffer.force();
                     }
                 } catch (Throwable e) {
                     log.error("Error occurred when force data to disk.", e);
                 }
 
+                // 设置 flushedPosition。（把 wrotePosition 或 commitPosition 更新到 flushedPosition。）
                 this.flushedPosition.set(value);
+                // 释放引用
                 this.release();
             } else {
                 log.warn("in flush, hold failed, flush offset = " + this.flushedPosition.get());
@@ -490,6 +496,7 @@ public class MappedFile extends ReferenceResource {
             }
 
             // prevent gc
+            // 有可能是防止 gc 影响写的时间。因为 gc 的话应该是影响不到 page cache 和内容映射的，所以感觉可能是怕影响写的时间过长。
             if (j % 1000 == 0) {
                 log.info("j={}, costTime={}", j, System.currentTimeMillis() - time);
                 time = System.currentTimeMillis();

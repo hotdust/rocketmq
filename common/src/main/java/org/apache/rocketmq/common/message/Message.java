@@ -139,6 +139,12 @@ public class Message implements Serializable {
         this.putProperty(MessageConst.PROPERTY_DELAY_TIME_LEVEL, String.valueOf(level));
     }
 
+    /**
+     * 判断消息是"批量同步刷盘"，还是"单条同步刷盘"
+     * 批量同步刷盘：每间隔一定时间（默认是10ms），把一批消息同步刷盘。
+     * 单条同步刷盘：每条消息都做一次同步刷盘。
+     * @return
+     */
     public boolean isWaitStoreMsgOK() {
         String result = this.getProperty(MessageConst.PROPERTY_WAIT_STORE_MSG_OK);
         if (null == result)

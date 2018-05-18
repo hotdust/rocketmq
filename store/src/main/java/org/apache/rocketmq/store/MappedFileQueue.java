@@ -196,14 +196,20 @@ public class MappedFileQueue {
         long createOffset = -1;
         MappedFile mappedFileLast = getLastMappedFile();
 
+        // 如果 queue 里还没有 mappedFile
         if (mappedFileLast == null) {
             createOffset = startOffset - (startOffset % this.mappedFileSize);
         }
 
+        // 如果最后一个 mappedFile 不是空，并且，已经满了无法写入了
         if (mappedFileLast != null && mappedFileLast.isFull()) {
+            // createOffset = 最后一个 mappedFile 的 FileFromOffset（相当于文件大小）+ 新文件大小
+            // 上面的 createOffset 就是新 mappedFile 文件名中的数字部分（除了补的0）
+            // 上面为什么用 getFileFromOffset 呢？可能是因为文件大小可能是可以改变的?
             createOffset = mappedFileLast.getFileFromOffset() + this.mappedFileSize;
         }
 
+        // 生成新的 mappedFile
         if (createOffset != -1 && needCreate) {
             String nextFilePath = this.storePath + File.separator + UtilAll.offset2FileName(createOffset);
             String nextNextFilePath = this.storePath + File.separator
@@ -466,6 +472,11 @@ public class MappedFileQueue {
      (offset / this.mappedFileSize) = 1
      (mappedFile.getFileFromOffset() / this.mappedFileSize) = 0
      index = 1 - 0 = 1
+
+
+     但是，如果写消息到 buffer 时，buffer 剩余空间不够写，那么就会把当前 buffer 用空白填满，
+     然后，新创建一个 buffer 来保存消息。
+     在这种情况下，此方法取得的 mappedFile 是第用空白填满的那个。那个 mappedFile 落盘后，getFileFromOffset就变成新的 buffer 的了，这个值一定比 mappedFileSize 小，所以取得的 mappedFile 是最新的那个。
      *
      * @param offset Offset.
      * @param returnFirstOnNotFound If the mapped file is not found, then return the first one.

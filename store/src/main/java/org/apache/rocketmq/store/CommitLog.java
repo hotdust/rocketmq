@@ -601,6 +601,7 @@ public class CommitLog {
                 case PUT_OK:
                     break;
                 case END_OF_FILE:
+                    // 如果 mappedFile 剩余空间不够保存 message，就生成一个新文件，来保存
                     unlockMappedFile = mappedFile;
                     // Create a new file, re-write the message
                     mappedFile = this.mappedFileQueue.getLastMappedFile(0);
@@ -651,7 +652,7 @@ public class CommitLog {
         // Synchronization flush
         if (FlushDiskType.SYNC_FLUSH == this.defaultMessageStore.getMessageStoreConfig().getFlushDiskType()) {
             final GroupCommitService service = (GroupCommitService) this.flushCommitLogService;
-            // TODO Q: 2018/5/11 这个属性是做什么的呢？
+            // 如果消息类型是"批量同步刷盘"消息
             if (msg.isWaitStoreMsgOK()) {
                 request = new GroupCommitRequest(result.getWroteOffset() + result.getWroteBytes());
                 // 向同步刷盘线程发送要落盘的消息
@@ -663,7 +664,7 @@ public class CommitLog {
                         + " client address: " + msg.getBornHostString());
                     putMessageResult.setPutMessageStatus(PutMessageStatus.FLUSH_DISK_TIMEOUT);
                 }
-            } else {
+            } else { // 消息类型是"单条刷盘"
                 service.wakeup();
             }
         }
@@ -1042,11 +1043,13 @@ public class CommitLog {
                     // There may be a message in the next file, so a maximum of
                     // two times the flush
                     boolean flushOK = false;
+                    // 这里为什么最多执行两次呢？
+                    // 因为如果消息大小超过 mappedFile 剩余空间时，会对两个 mappedFile 进行写入。执行一次 mappedFileQueue.flush 方法的话，只能对老的 mappedFile 写入，新的写不了。再执行一次的话，就会对新的 mappedFile 进行写入了，这个是在 MappedFileQueue#findMappedFileByOffset 方法中进行选择的。
                     for (int i = 0; i < 2 && !flushOK; i++) {
                         // 判断 mappedFileQueue 中文件刷完盘的位置(FlushedWhere) >= 消息的最后位置的话，说明这个消息已经落盘了（因为消息是多次写到 buffer 中的，但一次刷盘就可以把消息都落盘）
                         flushOK = CommitLog.this.mappedFileQueue.getFlushedWhere() >= req.getNextOffset();
 
-                        // 如果消息还没有落盘，就进行刷盘
+                        // 如果有消息还没有落盘，就进行刷盘
                         if (!flushOK) {
                             CommitLog.this.mappedFileQueue.flush(0);
                         }
