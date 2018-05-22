@@ -576,7 +576,7 @@ public class CommitLog {
         MappedFile unlockMappedFile = null;
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
 
-        // TODO Q: 2018/5/4 看看这个方法，这个方法里有意思，可以使用锁，也可以不使用锁。
+        // 使用重入锁 或 自旋锁（非阻塞锁）控制并发处理，保证只有一个线程可以进行写操作。
         lockForPutMessage(); //spin...
         try {
             long beginLockTimestamp = this.defaultMessageStore.getSystemClock().now();
@@ -586,6 +586,7 @@ public class CommitLog {
             // global
             msg.setStoreTimestamp(beginLockTimestamp);
 
+            // 如果这里需要判断，那上面在 try 外面取得 MappedFile 处理，拿到这里可读性是不是更好。
             if (null == mappedFile || mappedFile.isFull()) {
                 mappedFile = this.mappedFileQueue.getLastMappedFile(0); // Mark: NewFile may be cause noise
             }
@@ -1203,6 +1204,7 @@ public class CommitLog {
                 return new AppendMessageResult(AppendMessageStatus.MESSAGE_SIZE_EXCEEDED);
             }
 
+            // 如果剩余空间不够保存消息，就用空间消息把剩余空间写满
             // Determines whether there is sufficient free space
             if ((msgLen + END_FILE_MIN_BLANK_LENGTH) > maxBlank) {
                 this.resetByteBuffer(this.msgStoreItemMemory, maxBlank);
@@ -1267,6 +1269,8 @@ public class CommitLog {
                 this.msgStoreItemMemory.put(propertiesData);
 
             final long beginTimeMills = CommitLog.this.defaultMessageStore.now();
+
+            // 把消息写进 buffer
             // Write messages to the queue buffer
             byteBuffer.put(this.msgStoreItemMemory.array(), 0, msgLen);
 

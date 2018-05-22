@@ -257,7 +257,8 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         }
 
         final long startTimstamp = this.brokerController.getBrokerConfig().getStartAcceptSendRequestTimeStamp();
-        // TODO Q: 2018/5/4 这个判断的目的是什么呢？
+        // 这个地方应该是判断 broker 是否是暂停使用阶段，应该是可以 n 秒后恢复的那种。
+        // 从代码上看，这个功能好像没有使用。
         if (this.brokerController.getMessageStore().now() < startTimstamp) {
             response.setCode(ResponseCode.SYSTEM_ERROR);
             response.setRemark(String.format("broker unable to service, until %s", UtilAll.timeMillisToHumanString2(startTimstamp)));
@@ -265,6 +266,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         }
 
         response.setCode(-1);
+        // 对消息能否被接收进行 check
         super.msgCheck(ctx, requestHeader, response);
         if (response.getCode() != -1) {
             return response;
@@ -285,6 +287,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             sysFlag |= MessageSysFlag.MULTI_TAGS_FLAG;
         }
 
+        // 判断消息发送次数，是否应该保存到死信队列
         String newTopic = requestHeader.getTopic();
         if (null != newTopic && newTopic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
             String groupName = newTopic.substring(MixAll.RETRY_GROUP_TOPIC_PREFIX.length());
@@ -316,6 +319,8 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                 }
             }
         }
+
+        // 准备消息
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
         msgInner.setTopic(newTopic);
         msgInner.setBody(body);
@@ -331,6 +336,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         msgInner.setStoreHost(this.getStoreHost());
         msgInner.setReconsumeTimes(requestHeader.getReconsumeTimes() == null ? 0 : requestHeader.getReconsumeTimes());
 
+        // 是否使用了事务
         if (this.brokerController.getBrokerConfig().isRejectTransactionMessage()) {
             String traFlag = msgInner.getProperty(MessageConst.PROPERTY_TRANSACTION_PREPARED);
             if (traFlag != null) {
@@ -341,7 +347,10 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             }
         }
 
+        // 保存消息
         PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
+
+        // 根据保存结果，设置返回值。
         if (putMessageResult != null) {
             boolean sendOK = false;
 

@@ -198,12 +198,13 @@ public class MappedFile extends ReferenceResource {
         int currentPos = this.wrotePosition.get();
 
         if (currentPos < this.fileSize) {
-            // 取得 file 中，剩余部分的 buffer
+            // 对于 file ，取得一个新的引用
             ByteBuffer byteBuffer = writeBuffer != null ? writeBuffer.slice() : this.mappedByteBuffer.slice();
             // 为什么要设置 currentPos？ slice()后的 buffer 是从剩余部分开始的，position 前的部分都不包含呀。
             // 因为没有单独使用过 上面两个 buffer 单独进行过 put 操作，都是 slice 后的引用进行 put，
             // 所以，position 一起都是 0。对于 position，是使用手动进行记录 position 位置的：wrotePosition。
             byteBuffer.position(currentPos);
+            // 在回调方法里，把消息真正的写入 buffer 中
             AppendMessageResult result =
                 cb.doAppend(this.getFileFromOffset(), byteBuffer, this.fileSize - currentPos, msg);
             // 使用 message 的字符数，更新 wrotePosition，记录下次开始写的位置。

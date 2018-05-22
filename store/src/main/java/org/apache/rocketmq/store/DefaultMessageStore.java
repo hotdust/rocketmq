@@ -305,12 +305,13 @@ public class DefaultMessageStore implements MessageStore {
             return new PutMessageResult(PutMessageStatus.PROPERTIES_SIZE_EXCEEDED, null);
         }
 
-        // TODO Q: 2018/5/4 如何判断是busy的？
+        // 判断 OSPageCache 是否是繁忙状态
         if (this.isOSPageCacheBusy()) {
             return new PutMessageResult(PutMessageStatus.OS_PAGECACHE_BUSY, null);
         }
 
         long beginTime = this.getSystemClock().now();
+        // 进行写消息
         PutMessageResult result = this.commitLog.putMessage(msg);
 
         long eclipseTime = this.getSystemClock().now() - beginTime;
@@ -319,6 +320,7 @@ public class DefaultMessageStore implements MessageStore {
         }
         this.storeStatsService.setPutMessageEntireTimeMax(eclipseTime);
 
+        // 如果写消息失败，进行计数
         if (null == result || !result.isOk()) {
             this.storeStatsService.getPutMessageFailedTimes().incrementAndGet();
         }
@@ -326,6 +328,10 @@ public class DefaultMessageStore implements MessageStore {
         return result;
     }
 
+    /**
+     * 消息在写入 buffer 的时间（不算刷盘时间），大于指定值的话，就算 busy
+     * @return
+     */
     @Override
     public boolean isOSPageCacheBusy() {
         long begin = this.getCommitLog().getBeginTimeInLock();
