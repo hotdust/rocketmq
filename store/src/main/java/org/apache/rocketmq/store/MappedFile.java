@@ -145,7 +145,8 @@ public class MappedFile extends ReferenceResource {
     }
 
     public void init(final String fileName, final int fileSize, final TransientStorePool transientStorePool) throws IOException {
-        // TODO Q: 2018/5/17 使用 writeBuffer 时候，为什么也创建 mappedByteBuffer？
+        // 使用 writeBuffer 时候，为什么也创建 mappedByteBuffer？
+        // 因为在落盘时，要先把 writeBuffer 里的内容写到 fileChannel 上，而打开 channel 是在 init 方法中做的。
         init(fileName, fileSize);
         this.writeBuffer = transientStorePool.borrowBuffer();
         this.transientStorePool = transientStorePool;
@@ -271,7 +272,7 @@ public class MappedFile extends ReferenceResource {
                     log.error("Error occurred when force data to disk.", e);
                 }
 
-                // 设置 flushedPosition。（把 wrotePosition 或 commitPosition 更新到 flushedPosition。）
+                // 设置 flushedPosition。（用 wrotePosition 或 committedPosition 更新 flushedPosition。）
                 this.flushedPosition.set(value);
                 // 释放引用
                 this.release();
