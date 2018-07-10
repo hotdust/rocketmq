@@ -147,6 +147,7 @@ public class MappedFile extends ReferenceResource {
     public void init(final String fileName, final int fileSize, final TransientStorePool transientStorePool) throws IOException {
         // 使用 writeBuffer 时候，为什么也创建 mappedByteBuffer？
         // 因为在落盘时，要先把 writeBuffer 里的内容写到 fileChannel 上，而打开 channel 是在 init 方法中做的。
+        // ConsumeQueue 写数据使用的是 FileChannel，而 IndexFile 使用而是 MMAP。
         init(fileName, fileSize);
         this.writeBuffer = transientStorePool.borrowBuffer();
         this.transientStorePool = transientStorePool;
@@ -227,9 +228,9 @@ public class MappedFile extends ReferenceResource {
     }
 
     /**
-
+     * ConsumeQueue 使用这个方法。
      *
-
+     *
      */
     public boolean appendMessage(final byte[] data) {
         int currentPos = this.wrotePosition.get();

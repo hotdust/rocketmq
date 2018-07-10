@@ -217,6 +217,7 @@ public class IndexService {
                     return;
             }
 
+            // 以 UniqKey 作为 key 创建索引。这个 key 是自动生成的，所以每条消息一定会创建一条索引。
             if (req.getUniqKey() != null) {
                 indexFile = putKey(indexFile, msg, buildKey(topic, req.getUniqKey()));
                 if (indexFile == null) {
@@ -225,6 +226,8 @@ public class IndexService {
                 }
             }
 
+            // 如果 keys 不为空，也使用 keys 创建索引。
+            // 也就是说，一个消息至少会创建一条索引。有可能创建多个索引，如果 keys 中间有空格。
             if (keys != null && keys.length() > 0) {
                 String[] keyset = keys.split(MessageConst.KEY_SEPARATOR);
                 for (int i = 0; i < keyset.length; i++) {
