@@ -364,7 +364,7 @@ public class DefaultMessageStore implements MessageStore {
             log.warn("message store has shutdown, so getMessage is forbidden");
             return null;
         }
-
+        // 判断是否可读
         if (!this.runningFlags.isReadable()) {
             log.warn("message store is not readable, so getMessage is forbidden " + this.runningFlags.getFlagBits());
             return null;
@@ -381,11 +381,13 @@ public class DefaultMessageStore implements MessageStore {
 
         final long maxOffsetPy = this.commitLog.getMaxOffset();
 
+        // 根据 topic 和 queueId，取得 consumeQueue
         ConsumeQueue consumeQueue = findConsumeQueue(topic, queueId);
         if (consumeQueue != null) {
             minOffset = consumeQueue.getMinOffsetInQueue();
             maxOffset = consumeQueue.getMaxOffsetInQueue();
 
+            // 判断 minOffset、offset 和 maxOffset 之间的关系
             if (maxOffset == 0) {
                 status = GetMessageStatus.NO_MESSAGE_IN_QUEUE;
                 nextBeginOffset = nextOffsetCorrection(offset, 0);
@@ -403,9 +405,11 @@ public class DefaultMessageStore implements MessageStore {
                     nextBeginOffset = nextOffsetCorrection(offset, maxOffset);
                 }
             } else {
+                // 取得 "从 offset 到当前 mappedFile 写到位置" 之间的消息。
                 SelectMappedBufferResult bufferConsumeQueue = consumeQueue.getIndexBuffer(offset);
                 if (bufferConsumeQueue != null) {
                     try {
+                        // TODO Q: 2018/7/23 什么时候 status 会变成这种状态
                         status = GetMessageStatus.NO_MATCHED_MESSAGE;
 
                         long nextPhyFileStartOffset = Long.MIN_VALUE;
@@ -415,6 +419,7 @@ public class DefaultMessageStore implements MessageStore {
                         final int maxFilterMessageCount = 16000;
                         final boolean diskFallRecorded = this.messageStoreConfig.isDiskFallRecorded();
                         for (; i < bufferConsumeQueue.getSize() && i < maxFilterMessageCount; i += ConsumeQueue.CQ_STORE_UNIT_SIZE) {
+                            // 取得 consumeQueue 里保存的每条消息的各个属性
                             long offsetPy = bufferConsumeQueue.getByteBuffer().getLong();
                             int sizePy = bufferConsumeQueue.getByteBuffer().getInt();
                             long tagsCode = bufferConsumeQueue.getByteBuffer().getLong();
@@ -426,14 +431,20 @@ public class DefaultMessageStore implements MessageStore {
                                     continue;
                             }
 
+                            // 判断消息是否在磁盘上
                             boolean isInDisk = checkInDiskByCommitOffset(offsetPy, maxOffsetPy);
 
+                            // 判断 消息数 或 消息大小 是否满足最小 pull 条件。
+                            // 如果满足就把消息返回；不满足如何做呢？
+                            // TODO Q: 2018/7/23 不满足如何做呢？
                             if (this.isTheBatchFull(sizePy, maxMsgNums, getResult.getBufferTotalSize(), getResult.getMessageCount(),
                                 isInDisk)) {
                                 break;
                             }
 
+                            // 判断是否满足 filter
                             if (this.messageFilter.isMessageMatched(subscriptionData, tagsCode)) {
+                                // 如果符合过滤条件，就把这条消息加到返回的集合中
                                 SelectMappedBufferResult selectResult = this.commitLog.getMessage(offsetPy, sizePy);
                                 if (selectResult != null) {
                                     this.storeStatsService.getGetMessageTransferedMsgCount().incrementAndGet();
@@ -447,7 +458,8 @@ public class DefaultMessageStore implements MessageStore {
 
                                     nextPhyFileStartOffset = this.commitLog.rollNextFile(offsetPy);
                                 }
-                            } else {
+                            } else {// 不满足 filter
+                                // 如果
                                 if (getResult.getBufferTotalSize() == 0) {
                                     status = GetMessageStatus.NO_MATCHED_MESSAGE;
                                 }

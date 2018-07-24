@@ -397,7 +397,10 @@ public class MappedFile extends ReferenceResource {
     }
 
     /**
-
+     * 取得消息的方法如下：
+     *  1，先把 mappedFile 对应的 mappedByteBuffer 的 position 设置成参数 pos 的位置。
+     *  2，使用 mappedByteBuffer 进行 slice 操作，这样 slice 方法返回的 ByteBuffer 的开始位置就是 pos 的位置。
+     *  3，最后对 slice 产生的 ByteBuffer 设置 limit，这样在读这个 ByteBuffer 时就不会读过了。
      */
     public SelectMappedBufferResult selectMappedBuffer(int pos) {
         int readPosition = getReadPosition();
