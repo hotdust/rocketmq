@@ -88,6 +88,7 @@ public class MQClientInstance {
     private final String clientId;
     private final long bootTimestamp = System.currentTimeMillis();
     private final ConcurrentHashMap<String/* group */, MQProducerInner> producerTable = new ConcurrentHashMap<String, MQProducerInner>();
+    // 在 consumer 调用 start() 方法时，都会把这自己放到这个 map 中。
     private final ConcurrentHashMap<String/* group */, MQConsumerInner> consumerTable = new ConcurrentHashMap<String, MQConsumerInner>();
     private final ConcurrentHashMap<String/* group */, MQAdminExtInner> adminExtTable = new ConcurrentHashMap<String, MQAdminExtInner>();
     private final NettyClientConfig nettyClientConfig;
@@ -501,6 +502,7 @@ public class MQClientInstance {
         }
 
         long times = this.storeTimesTotal.getAndIncrement();
+        // 取得所有的 broker 信息（master 和 slave）
         Iterator<Entry<String, HashMap<Long, String>>> it = this.brokerAddrTable.entrySet().iterator();
         while (it.hasNext()) {
             Entry<String, HashMap<Long, String>> entry = it.next();
@@ -511,6 +513,7 @@ public class MQClientInstance {
                     Long id = entry1.getKey();
                     String addr = entry1.getValue();
                     if (addr != null) {
+                        // 如果 consumer 信息为空，并且 当前broker是 slave，就跳过当前 broker
                         if (consumerEmpty) {
                             if (id != MixAll.MASTER_ID)
                                 continue;

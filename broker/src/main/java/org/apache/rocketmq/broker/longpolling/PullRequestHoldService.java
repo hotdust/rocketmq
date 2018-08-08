@@ -123,13 +123,19 @@ public class PullRequestHoldService extends ServiceThread {
 
                 for (PullRequest request : requestList) {
                     long newestOffset = maxOffset;
+                    // 如果 maxOffset < 被挂起的请求来时 header 中的 offset，就从 CommitLog 再取一次 maxoffset
+                    // 传进来的 maxOffset 有两个地方设置：
+                    // 1, 上面的 checkHoldRequest 方法，是从 CommitLog 中取得的
+                    // 2，ReputMessageService#doReput 方法中有新的消息写进来后，调用本方法，这时 maxOffset 为 "当时的dispatchRequest.getConsumeQueueOffset() + 1"
                     if (newestOffset <= request.getPullFromThisOffset()) {
                         newestOffset = this.brokerController.getMessageStore().getMaxOffsetInQuque(topic, queueId);
                     }
 
+                    // 如果 maxOffset > 被挂起的请求来时 header 中的 offset 就进行取得消息操作
                     if (newestOffset > request.getPullFromThisOffset()) {
                         if (this.messageFilter.isMessageMatched(request.getSubscriptionData(), tagsCode)) {
                             try {
+                                // 里面其实就是再进行了一次 processRequest。用线程池进行的再次拉取。
                                 this.brokerController.getPullMessageProcessor().executeRequestWhenWakeup(request.getClientChannel(),
                                     request.getRequestCommand());
                             } catch (Throwable e) {

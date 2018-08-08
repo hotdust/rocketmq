@@ -229,6 +229,7 @@ public abstract class RebalanceImpl {
             }
         }
 
+        // TODO: 2018/8/1 怎么会出现"未订阅的topic对应的消息队列"？
         this.truncateMessageQueueNotMyTopic();
     }
 
@@ -335,7 +336,14 @@ public abstract class RebalanceImpl {
             MessageQueue mq = next.getKey();
             ProcessQueue pq = next.getValue();
 
+            // 如果 processQueueTable 中的当前这条数据的 topic 和 "要做 balance 的 topic" 相同的话，
+            // 就把当前这条数据从 processQueueTable 删除掉。
             if (mq.getTopic().equals(topic)) {
+                // 如果 processQueueTable 中的当前这条数据的 mq 不在 topic 对应的 mq 集合里的话，
+                // （说明经过 这个 queue 已经不存在了，就不需要对这个 queue 进行 pull 了。queue 的数据
+                //   缩减这种操作可能不会有，是不是有可能有的 broker 关了，造成取得不到 broker 信息，
+                //   就不再 pull 了）
+                // （mqSet 是 topic 和 Set<MessageQueue> 的映射。）
                 if (!mqSet.contains(mq)) {
                     pq.setDropped(true);
                     if (this.removeUnnecessaryMessageQueue(mq, pq)) {
@@ -363,7 +371,11 @@ public abstract class RebalanceImpl {
             }
         }
 
+
+
         List<PullRequest> pullRequestList = new ArrayList<PullRequest>();
+        // 检查一下 mqSet 中的哪个 mq 没有对应的 ProcessQueue，
+        // 找到没有对应的 ProcessQueue 后，创建一个对应的 ProcessQueue。
         for (MessageQueue mq : mqSet) {
             if (!this.processQueueTable.containsKey(mq)) {
                 if (isOrder && !this.lock(mq)) {

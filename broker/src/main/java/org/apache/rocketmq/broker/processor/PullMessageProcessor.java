@@ -385,7 +385,7 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                     }
                     break;
                 case ResponseCode.PULL_NOT_FOUND:
-
+                    // 如果在没有数据的情况下，并且设置可以挂起的话，就把当前请求挂起
                     if (brokerAllowSuspend && hasSuspendFlag) {
                         // TODO Q: 2018/7/30 suspendTimeoutMillisLong 这个变量的作用是什么？
                         long pollingTimeMills = suspendTimeoutMillisLong;
