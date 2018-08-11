@@ -62,6 +62,7 @@ public class MappedFile extends ReferenceResource {
     // 距离上一个文件的 offset
     // 假如 commit log 有3个文件：00000000000000000000、00000000000000524288、00000000000001048576
     // 00000000000001048576 这个文件是正在写的文件，那么 fileFromOffset 就是 524288。
+    // TODO: 18/5/26 这里写的好像不对，如果00000000000001048576 这个文件是正在写的文件，那么 fileFromOffset 应该是 1048576。
     private long fileFromOffset;
     private File file;
     private MappedByteBuffer mappedByteBuffer;
