@@ -464,7 +464,7 @@ public class MappedFileQueue {
      *
      * 假设：
      现在有两个文件：00000000000000000000、00000000000000524288。
-     offset: 734297 （第二个文件名 + 已经写入的消息位置）
+     offset: 734297 （这个 offset 是：第二个文件名(524288) + 已经写入的消息位置(210009)）
      mappedFileSize: 524288（每个文件的大小）
      mappedFile.getFileFromOffset(): 0 （因为第一个文件名就是 0）
 

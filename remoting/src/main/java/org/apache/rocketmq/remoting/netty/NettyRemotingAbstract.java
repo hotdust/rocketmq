@@ -152,6 +152,7 @@ public abstract class NettyRemotingAbstract {
             }
 
             try {
+                // 如果系统不繁忙，处理这个消息（也就是执行上面的 run 定义）
                 final RequestTask requestTask = new RequestTask(run, ctx.channel(), cmd);
                 pair.getObject2().submit(requestTask);
             } catch (RejectedExecutionException e) {

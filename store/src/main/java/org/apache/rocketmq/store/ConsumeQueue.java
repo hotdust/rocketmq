@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 public class ConsumeQueue {
 
+    // ConsumeQueue 中每条数据的大小：CommitLog offset(long) + size(int) + Message Tag HashCode(long)
     public static final int CQ_STORE_UNIT_SIZE = 20;
     private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private static final Logger LOG_ERROR = LoggerFactory.getLogger(LoggerName.STORE_ERROR_LOGGER_NAME);

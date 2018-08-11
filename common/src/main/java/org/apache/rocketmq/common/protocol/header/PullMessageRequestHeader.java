@@ -30,18 +30,33 @@ public class PullMessageRequestHeader implements CommandCustomHeader {
     private String consumerGroup;
     @CFNotNull
     private String topic;
+    /**
+     * topic 下具体的 consume queue 的 id
+     */
     @CFNotNull
     private Integer queueId;
+    /**
+     * consume queue 的消费位置，即从哪个位置上开始取消息
+     */
     @CFNotNull
     private Long queueOffset;
+    /**
+     * 取得消息的最大数量
+     */
     @CFNotNull
     private Integer maxMsgNums;
     @CFNotNull
     private Integer sysFlag;
+    /**
+     * 提交消费进度的位置
+     */
     @CFNotNull
     private Long commitOffset;
     @CFNotNull
     private Long suspendTimeoutMillis;
+    /**
+     * Filter 所用的表达式。用来控制取得哪些消息进行消费。
+     */
     @CFNullable
     private String subscription;
     @CFNotNull

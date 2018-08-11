@@ -79,6 +79,7 @@ public class ProcessQueue {
             try {
                 this.lockTreeMap.readLock().lockInterruptibly();
                 try {
+                    // 第一条消息如果不超时，就退出循环，结束本次 clean
                     if (!msgTreeMap.isEmpty() && System.currentTimeMillis() - Long.parseLong(MessageAccessor.getConsumeStartTimeStamp(msgTreeMap.firstEntry().getValue())) > pushConsumer.getConsumeTimeout() * 60 * 1000) {
                         msg = msgTreeMap.firstEntry().getValue();
                     } else {
@@ -93,7 +94,7 @@ public class ProcessQueue {
             }
 
             try {
-
+                // 把超时消息发回给 broker
                 pushConsumer.sendMessageBack(msg, 3);
                 log.info("send expire msg back. topic={}, msgId={}, storeHost={}, queueId={}, queueOffset={}", msg.getTopic(), msg.getMsgId(), msg.getStoreHost(), msg.getQueueId(), msg.getQueueOffset());
                 try {
@@ -101,6 +102,7 @@ public class ProcessQueue {
                     try {
                         if (!msgTreeMap.isEmpty() && msg.getQueueOffset() == msgTreeMap.firstKey()) {
                             try {
+                                // 然后，如果这条消息还在队列里，就清除掉这条消息
                                 msgTreeMap.remove(msgTreeMap.firstKey());
                             } catch (Exception e) {
                                 log.error("send expired msg exception", e);
@@ -188,7 +190,7 @@ public class ProcessQueue {
                     for (MessageExt msg : msgs) {
                         MessageExt prev = msgTreeMap.remove(msg.getQueueOffset());
                         if (prev != null) {
-                            removedCnt--;
+                            removedCnt--; // 因为AtomicLong没有减法操作，所以把个数变成负数，然后进行加。
                         }
                     }
                     msgCount.addAndGet(removedCnt);
