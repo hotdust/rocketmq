@@ -193,6 +193,9 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
         final MessageQueue messageQueue, //
         final boolean dispathToConsume) {
         if (dispathToConsume) {
+            // 在进行异步处理时，并没有传拉取到的 messages。
+            // 因为是顺序消费，所以有可能拉取到的 messages，不是 queue 最前的面的 message，
+            // 它前面可能还有消息没有被消费掉
             ConsumeRequest consumeRequest = new ConsumeRequest(processQueue, messageQueue);
             this.consumeExecutor.submit(consumeRequest);
         }
@@ -403,6 +406,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
             }
 
             final Object objLock = messageQueueLock.fetchLockObject(this.messageQueue);
+            // 同步 1: 对每个 MessageQueue 做同步处理
             synchronized (objLock) {
                 if (MessageModel.BROADCASTING.equals(ConsumeMessageOrderlyService.this.defaultMQPushConsumerImpl.messageModel())
                     || (this.processQueue.isLocked() && !this.processQueue.isLockExpired())) {
@@ -466,6 +470,9 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
                                     break;
                                 }
 
+                                // ****************
+                                // 调用用户实现的 listener
+                                // ****************
                                 status = messageListener.consumeMessage(Collections.unmodifiableList(msgs), context);
                             } catch (Throwable e) {
                                 log.warn("consumeMessage exception: {} Group: {} Msgs: {} MQ: {}", //
