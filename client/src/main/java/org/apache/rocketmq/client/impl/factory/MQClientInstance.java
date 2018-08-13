@@ -240,7 +240,6 @@ public class MQClientInstance {
                     // 启动 pull 任务，定时去 broker 取数据。
                     // Start pull service
                     this.pullMessageService.start();
-                    // todo 还没有细看。
                     // Start rebalance service
                     this.rebalanceService.start();
                     // 启动 defaultMQProducer

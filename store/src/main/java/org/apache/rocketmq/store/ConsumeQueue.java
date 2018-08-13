@@ -416,6 +416,8 @@ public class ConsumeQueue {
 
     public SelectMappedBufferResult getIndexBuffer(final long startIndex) {
         int mappedFileSize = this.mappedFileSize;
+        // startIndex 是 queueOffset，startIndex * CQ_STORE_UNIT_SIZE 是取得 consume queue 这个位置
+        // 上对应的这条消息的 CommitLog 上的物理 offset。下面的 offset 就是这条消息的物理 offset
         long offset = startIndex * CQ_STORE_UNIT_SIZE;
         if (offset >= this.getMinLogicOffset()) {
             MappedFile mappedFile = this.mappedFileQueue.findMappedFileByOffset(offset);

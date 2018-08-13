@@ -75,6 +75,9 @@ public class Producer {
                     ("Hello RocketMQ " + i).getBytes(RemotingHelper.DEFAULT_CHARSET) /* Message body */
                 );
 
+                // set delay level
+                msg.setDelayTimeLevel(1000);
+
                 /*
                  * Call send message to deliver message to one of brokers.
                  */

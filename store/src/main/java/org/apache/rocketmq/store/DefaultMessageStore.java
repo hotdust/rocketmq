@@ -406,6 +406,7 @@ public class DefaultMessageStore implements MessageStore {
                 }
             } else {
                 // 取得 "从 offset 到当前 mappedFile 写到位置" 之间的消息。
+                // 注意：这个取得的是 comsumeQueue 的数据，不是 CommitLog 上的数据
                 SelectMappedBufferResult bufferConsumeQueue = consumeQueue.getIndexBuffer(offset);
                 if (bufferConsumeQueue != null) {
                     try {
@@ -444,9 +445,9 @@ public class DefaultMessageStore implements MessageStore {
                                 break;
                             }
 
-                            // 判断是否满足 filter
+                            // 如果符合过滤条件，就把这条消息加到返回的集合中
                             if (this.messageFilter.isMessageMatched(subscriptionData, tagsCode)) {
-                                // 如果符合过滤条件，就把这条消息加到返回的集合中
+                                // 这里是通过上 cosume queue 里的信息，从 CommitLog 上取得真正消息。
                                 SelectMappedBufferResult selectResult = this.commitLog.getMessage(offsetPy, sizePy);
                                 if (selectResult != null) {
                                     this.storeStatsService.getGetMessageTransferedMsgCount().incrementAndGet();

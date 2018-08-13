@@ -48,9 +48,16 @@ public class ScheduleMessageService extends ConfigManager {
     private static final long DELAY_FOR_A_WHILE = 100L;
     private static final long DELAY_FOR_A_PERIOD = 10000L;
 
+    /**
+     * 例如：
+     * 1 : 5s
+     * 2 : 10s
+     * ...
+     */
     private final ConcurrentHashMap<Integer /* level */, Long/* delay timeMillis */> delayLevelTable =
         new ConcurrentHashMap<Integer, Long>(32);
 
+    // 应该是每个延迟时间 queue 和 消费的 offset
     private final ConcurrentHashMap<Integer /* level */, Long/* offset */> offsetTable =
         new ConcurrentHashMap<Integer, Long>(32);
 
@@ -85,6 +92,7 @@ public class ScheduleMessageService extends ConfigManager {
         }
     }
 
+    // 更新 offset
     private void updateOffset(int delayLevel, long offset) {
         this.offsetTable.put(delayLevel, offset);
     }
@@ -150,6 +158,7 @@ public class ScheduleMessageService extends ConfigManager {
             .getStorePathRootDir());
     }
 
+    // 通过些方法把保存的关于 延迟消息的 offset 等数据进行解析，初始化到内存中。
     @Override
     public void decode(String jsonString) {
         if (jsonString != null) {
@@ -161,6 +170,7 @@ public class ScheduleMessageService extends ConfigManager {
         }
     }
 
+    // 把内存中的数据转成 json 保存文件里
     public String encode(final boolean prettyFormat) {
         DelayOffsetSerializeWrapper delayOffsetSerializeWrapper = new DelayOffsetSerializeWrapper();
         delayOffsetSerializeWrapper.setOffsetTable(this.offsetTable);
@@ -260,14 +270,18 @@ public class ScheduleMessageService extends ConfigManager {
 
                             long countdown = deliverTimestamp - now;
 
+                            // 如果时间已经到，就把消息放到正常队列中。
                             if (countdown <= 0) {
+                                // 取得具体的消息内容
                                 MessageExt msgExt =
                                     ScheduleMessageService.this.defaultMessageStore.lookMessageByOffset(
                                         offsetPy, sizePy);
 
                                 if (msgExt != null) {
                                     try {
+                                        // 还原消息的 topic 和 queueId 为"放到delay队列前"的值
                                         MessageExtBrokerInner msgInner = this.messageTimeup(msgExt);
+                                        // 把消息保存起来
                                         PutMessageResult putMessageResult =
                                             ScheduleMessageService.this.defaultMessageStore
                                                 .putMessage(msgInner);
@@ -300,7 +314,7 @@ public class ScheduleMessageService extends ConfigManager {
                                                 + offsetPy + ",sizePy=" + sizePy, e);
                                     }
                                 }
-                            } else {
+                            } else {// 如果时间还没到，再发送一个定时任务
                                 ScheduleMessageService.this.timer.schedule(
                                     new DeliverDelayedMessageTimerTask(this.delayLevel, nextOffset),
                                     countdown);

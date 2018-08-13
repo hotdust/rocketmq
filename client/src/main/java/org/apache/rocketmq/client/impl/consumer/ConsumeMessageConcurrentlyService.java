@@ -322,8 +322,10 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 break;
         }
 
-        // 从 processQueue 里删除消费完的消息，如果 processQueue 里有消息，
-        // 就剩余消息的第一个（offset最小）的 offset；如果没有，就返回删除消息中，最后一个消息的 offset + 1
+        // 从 processQueue 里删除消费完的消息。
+        // 如果 processQueue 里有消息，就剩余消息的第一个（queueOffset最小）的 queueOffset；
+        // 如果没有，就返回删除消息中，最后一个消息的 queueOffset + 1
+        // 注意：这里的 queueOffset 是每个消息进入 broker 后，这个 queueOffset 都是递增 1 的。
         long offset = consumeRequest.getProcessQueue().removeMessage(consumeRequest.getMsgs());
         // 如果 consumeRequest.getMsgs() 有消息的话，就更新消费 offset。
         // （如果消费失败，这些消息被发回 broker 的话，consumeRequest.getMsgs()就为空）
