@@ -78,8 +78,15 @@ public class RebalancePushImpl extends RebalanceImpl {
         return true;
     }
 
+    /**
+     * 通知 broker 解锁 mq
+     * @param mq
+     * @param pq
+     * @return
+     */
     private boolean unlockDelay(final MessageQueue mq, final ProcessQueue pq) {
 
+        // 如果 msgTreeMap 里还有消息（注意，并不是 msgTreeMapTemp 里还有消息）
         if (pq.hasTempMessage()) {
             log.info("[{}]unlockDelay, begin {} ", mq.hashCode(), mq);
             this.defaultMQPushConsumerImpl.getmQClientFactory().getScheduledExecutorService().schedule(new Runnable() {

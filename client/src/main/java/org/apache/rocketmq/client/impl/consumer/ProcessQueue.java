@@ -43,6 +43,7 @@ public class ProcessQueue {
     private final static long PULL_MAX_IDLE_TIME = Long.parseLong(System.getProperty("rocketmq.client.pull.pullMaxIdleTime", "120000"));
     private final Logger log = ClientLogger.getLog();
     private final ReadWriteLock lockTreeMap = new ReentrantReadWriteLock();
+    // 保存拉取到的消息
     private final TreeMap<Long, MessageExt> msgTreeMap = new TreeMap<Long, MessageExt>();
     private final AtomicLong msgCount = new AtomicLong();
     private final Lock lockConsume = new ReentrantLock();
@@ -283,6 +284,12 @@ public class ProcessQueue {
         }
     }
 
+    /**
+     * 从 msgTreeMap（保存还没有被消费的消息）里取得 batchSize 这么多个消息 返回。
+     * 并且，把从 msgTreeMap 取出的消息放到 msgTreeMapTemp 里，为了恢复用。
+     * @param batchSize
+     * @return
+     */
     public List<MessageExt> takeMessags(final int batchSize) {
         List<MessageExt> result = new ArrayList<MessageExt>(batchSize);
         final long now = System.currentTimeMillis();
