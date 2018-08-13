@@ -34,6 +34,7 @@ public class PullRequestHoldService extends ServiceThread {
     private final BrokerController brokerController;
     private final SystemClock systemClock = new SystemClock();
     private final MessageFilter messageFilter = new DefaultMessageFilter();
+    // 保存 topic@queueId 对应的"所有挂起的 consumer 的 request
     private ConcurrentHashMap<String/* topic@queueId */, ManyPullRequest> pullRequestTable =
         new ConcurrentHashMap<String, ManyPullRequest>(1024);
 

@@ -944,7 +944,8 @@ public class CommitLog {
                 // 取得刷盘最小页数
                 int flushPhysicQueueLeastPages = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getFlushCommitLogLeastPages();
 
-                // Message Queue 的刷盘国间隔？
+                // 这个主要是控制 flushPhysicQueueLeastPages 的。作用好像是在经过 flushPhysicQueueThoroughInterval 这么长时间后，
+                // 让下次刷盘能尽量成功，因为把 flushPhysicQueueLeastPages 设置成了 0
                 int flushPhysicQueueThoroughInterval =
                     CommitLog.this.defaultMessageStore.getMessageStoreConfig().getFlushCommitLogThoroughInterval();
 
@@ -960,11 +961,12 @@ public class CommitLog {
 
                 try {
                     // 如果是定时刷盘，就睡"刷盘最小间隔时间"这么长时间，然后进行刷盘。
-                    // TODO Q: 2018/5/11 是用这种方式实现定时刷盘的？
+                    // 定时是使用的 sleep 方法。用 sleep 的话，是不可内部的 waitPoint 中断的。
+                    // 也就是说只能等待这么长时间后再刷盘。
                     if (flushCommitLogTimed) {
                         Thread.sleep(interval);
                     } else {
-                        // TODO Q: 2018/5/11 这个的目的是什么？
+                        // 这个也是等待 interval 这长时间，但是可能被 waitPoint 中断等待。
                         this.waitForRunning(interval);
                     }
 
