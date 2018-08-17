@@ -1,29 +1,24 @@
 package org.apache.rocketmq.example.quickstart.my;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class Test {
     public static void main(String[] args) throws Exception {
-        final CountDownLatch latch = new CountDownLatch(2);
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
+        int DATA_SIZE = 10;
+        ByteBuffer data = ByteBuffer.allocate(DATA_SIZE);
+        for (int i = 0; i < 10; i++) {
+            data.put((byte) 1);
+        }
 
-                try {
-                    TimeUnit.SECONDS.sleep(2);
-                    latch.countDown();
-                    TimeUnit.SECONDS.sleep(2);
-                    latch.countDown();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
-
-
-        latch.await();
+        byte[] buffer = new byte[6];
+        data.flip();
+        data.get(buffer);
+        buffer = new byte[6];
+        data.get(buffer);
         System.out.println("complete");
+
 
     }
 }

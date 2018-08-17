@@ -16,7 +16,6 @@
  */
 package org.apache.rocketmq.example.quickstart;
 
-import java.util.List;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
@@ -25,10 +24,12 @@ import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.common.consumer.ConsumeFromWhere;
 import org.apache.rocketmq.common.message.MessageExt;
 
+import java.util.List;
+
 /**
  * This example shows how to subscribe and consume messages using providing {@link DefaultMQPushConsumer}.
  */
-public class Consumer {
+public class MultiConsumer {
 
     public static void main(String[] args) throws InterruptedException, MQClientException {
 
@@ -54,12 +55,12 @@ public class Consumer {
          */
         // add 设置 name server
         consumer.setNamesrvAddr("localhost:9876");
-        consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_LAST_OFFSET);
+        consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
 
         /*
          * Subscribe one more more topics to consume.
          */
-        consumer.subscribe("TopicTest", "TagA");
+        consumer.subscribe("TopicTest", "*");
 
         /*
          *  Register callback to execute on arrival of messages fetched from brokers.
@@ -78,6 +79,25 @@ public class Consumer {
          *  Launch the consumer instance.
          */
         consumer.start();
+
+
+        DefaultMQPushConsumer consumer1 = new DefaultMQPushConsumer("please_rename_unique_group_name_4");
+        consumer1.setNamesrvAddr("localhost:9876");
+        consumer1.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
+        consumer1.subscribe("bogon", "*");
+        consumer1.registerMessageListener(new MessageListenerConcurrently() {
+
+            @Override
+            public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs,
+                                                            ConsumeConcurrentlyContext context) {
+                System.out.printf(Thread.currentThread().getName() + " Receive New Messages: " + msgs + "%n");
+                return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
+            }
+        });
+        consumer1.start();
+
+
+
 
         System.out.printf("Consumer Started.%n");
     }

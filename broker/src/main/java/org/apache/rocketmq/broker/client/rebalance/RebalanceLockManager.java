@@ -130,6 +130,7 @@ public class RebalanceLockManager {
             try {
                 this.lock.lockInterruptibly();
                 try {
+                    // 取得 group 对应的 "queue 和 lock" 的 map
                     ConcurrentHashMap<MessageQueue, LockEntry> groupValue = this.mqLockTable.get(group);
                     if (null == groupValue) {
                         groupValue = new ConcurrentHashMap<>(32);
@@ -138,6 +139,7 @@ public class RebalanceLockManager {
 
                     for (MessageQueue mq : notLockedMqs) {
                         LockEntry lockEntry = groupValue.get(mq);
+                        // 如果没有锁，就创建一个锁。记录锁住这个 MessageQueue 的 clientId。
                         if (null == lockEntry) {
                             lockEntry = new LockEntry();
                             lockEntry.setClientId(clientId);
@@ -149,14 +151,17 @@ public class RebalanceLockManager {
                                 mq);
                         }
 
+                        // 如果是 MessageQueue 是被相同的 clientId 锁定，就更新时间，并加入锁定集合。
                         if (lockEntry.isLocked(clientId)) {
                             lockEntry.setLastUpdateTimestamp(System.currentTimeMillis());
                             lockedMqs.add(mq);
                             continue;
                         }
 
-                        String oldClientId = lockEntry.getClientId();
 
+                        String oldClientId = lockEntry.getClientId();
+                        // 如果 MessageQueue 已经被其它 client 锁定，并且锁已经过期，
+                        // 就更新锁 clientId 为当前 client。
                         if (lockEntry.isExpired()) {
                             lockEntry.setClientId(clientId);
                             lockEntry.setLastUpdateTimestamp(System.currentTimeMillis());
@@ -170,6 +175,9 @@ public class RebalanceLockManager {
                             continue;
                         }
 
+                        // 如果 MessageQueue 已经被其它 client 锁定，并且锁还没有过期，
+                        // 这样这个 MessageQueue 就无法锁定，无法加入到"锁定集合"中。
+                        // 最后记录一下 log。
                         log.warn(
                             "tryLockBatch, message queue locked by other client. Group: {} OtherClientId: {} NewClientId: {} {}", //
                             group, //

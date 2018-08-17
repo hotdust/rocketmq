@@ -264,15 +264,18 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
         long commitOffset = -1L;
         if (context.isAutoCommit()) {
             switch (status) {
-                case COMMIT:
+                case COMMIT: // commit 和 rollback 不太需要了，因为 success 和 SUSPEND_CURRENT_QUEUE_A_MOMENT 和他们的作用基本相同。
                 case ROLLBACK:
                     log.warn("the message queue consume result is illegal, we think you want to ack these message {}",
                         consumeRequest.getMessageQueue());
                 case SUCCESS:
+                    // 消费成功就 commit(把 msgTreeMapTemp 清空)
                     commitOffset = consumeRequest.getProcessQueue().commit();
                     this.getConsumerStatsManager().incConsumeOKTPS(consumerGroup, consumeRequest.getMessageQueue().getTopic(), msgs.size());
                     break;
                 case SUSPEND_CURRENT_QUEUE_A_MOMENT:
+                    // 把 msgTreeMapTemp 中的消息，退回到 msgTreeMap 里，重新消费。
+                    // 对下面的 checkReconsumeTimes 条件，不太可能超过 reconsumeTimes，这个值是 MaxInt
                     this.getConsumerStatsManager().incConsumeFailedTPS(consumerGroup, consumeRequest.getMessageQueue().getTopic(), msgs.size());
                     if (checkReconsumeTimes(msgs)) {
                         consumeRequest.getProcessQueue().makeMessageToCosumeAgain(msgs);
@@ -281,7 +284,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
                             consumeRequest.getMessageQueue(), //
                             context.getSuspendCurrentQueueTimeMillis());
                         continueConsume = false;
-                    } else {
+                    } else {// 如果超过 reconsumeTimes，就算消费成功。
                         commitOffset = consumeRequest.getProcessQueue().commit();
                     }
                     break;
@@ -468,8 +471,10 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
                             ConsumeReturnType returnType = ConsumeReturnType.SUCCESS;
                             boolean hasException = false;
                             try {
-                                // 消费前，锁住 pq
+                                // 同步 2: 消费前，锁住 pq
                                 // TODO Q: 2018/8/13 为什么要锁住 pq，锁住 mq 不能保存安全吗？
+                                // 这个锁在 RebalancePushImpl#removeUnnecessaryMessageQueue 方法中使用
+                                // 那个方法作用是让 broker 解除对 mq 的锁，不明白为什么要使用这 consumeLock
                                 this.processQueue.getLockConsume().lock();
                                 if (this.processQueue.isDropped()) {
                                     log.warn("consumeMessage, the message queue not be able to consume, because it's dropped. {}",

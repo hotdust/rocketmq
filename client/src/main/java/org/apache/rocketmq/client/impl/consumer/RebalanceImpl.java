@@ -44,9 +44,13 @@ import org.slf4j.Logger;
  */
 public abstract class RebalanceImpl {
     protected static final Logger log = ClientLogger.getLog();
+    // 这个属性的内容在 RebalanceService 启动，进行了设置。ProcessQueue 是如何初始化的呢？
+    // 从 subscriptionInner 属性取得当前实例上订阅的所有 topic，对于 topic 的每个 queue（对应代码中的 MessageQueue）都创建一个 ProcessQueue。创建完 ProcessQueue 后，就把 MessaegQueue 和 ProcessQueue 放到当前这个属性中。关于这个属性的更新，会随着 RebalanceService 的定时启动而更新。
     protected final ConcurrentHashMap<MessageQueue, ProcessQueue> processQueueTable = new ConcurrentHashMap<MessageQueue, ProcessQueue>(64);
+    // 用来保存 topic 和 MessageQueue 的对应关系。这个变量的初始值，是 consumer 在启动时（DefaultMQPushConsumerImpl#start），从 name server 取得 topic 信息，然后根据 subscriptionInner 属性取得当前实例上订阅的所有 topic，把从 name server 取得 topic 信息转化成我们需要的 topic 信息，保存到这个属性中。
     protected final ConcurrentHashMap<String/* topic */, Set<MessageQueue>> topicSubscribeInfoTable =
         new ConcurrentHashMap<String, Set<MessageQueue>>();
+    // 用来保存每个 consumer 订阅的 topic 和 tags 的信息。每个 cosnumer 调用 subscribe 来订阅 topic 时，都会把订阅的 topic 和 订阅条件(就是 tags) 都加到这个属性中来。Map 第一个参数是 topic，第二个参数是 tags。
     protected final ConcurrentHashMap<String /* topic */, SubscriptionData> subscriptionInner =
         new ConcurrentHashMap<String, SubscriptionData>();
     protected String consumerGroup;
@@ -200,7 +204,7 @@ public abstract class RebalanceImpl {
                         }
                     }
 
-                    // 锁完 pq 之后，再检查一下是否有没锁上的 pq。
+                    // 把未能锁定的 queue 对应的 pq 设置成未锁定状态，并输出 log。
                     for (MessageQueue mq : mqs) {
                         if (!lockOKMQSet.contains(mq)) {
                             ProcessQueue processQueue = this.processQueueTable.get(mq);

@@ -35,6 +35,7 @@ public class Consumer {
 
         consumer.subscribe("TopicTest", "TagA || TagC || TagD");
 
+        // 消费时候，使用 MessageListenerOrderly 接口，保证同一时间只有一个线程能消费 queue 里的消息。
         consumer.registerMessageListener(new MessageListenerOrderly() {
             AtomicLong consumeTimes = new AtomicLong(0);
 

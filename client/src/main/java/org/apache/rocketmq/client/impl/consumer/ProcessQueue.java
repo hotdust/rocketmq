@@ -42,11 +42,14 @@ public class ProcessQueue {
     public final static long REBALANCE_LOCK_INTERVAL = Long.parseLong(System.getProperty("rocketmq.client.rebalance.lockInterval", "20000"));
     private final static long PULL_MAX_IDLE_TIME = Long.parseLong(System.getProperty("rocketmq.client.pull.pullMaxIdleTime", "120000"));
     private final Logger log = ClientLogger.getLog();
+    // 对 msgTreeMap 和 msgTreeMapTemp 进行保护
     private final ReadWriteLock lockTreeMap = new ReentrantReadWriteLock();
     // 保存拉取到的消息
     private final TreeMap<Long, MessageExt> msgTreeMap = new TreeMap<Long, MessageExt>();
     private final AtomicLong msgCount = new AtomicLong();
+    // TODO Q: 2018/8/13 这个锁的目的还不清楚
     private final Lock lockConsume = new ReentrantLock();
+    // 这个属性在"顺序消费"时使用。主要是用来保存"要被 listner 消费的消息"，方便消费完进行 commit 或 rollback。
     private final TreeMap<Long, MessageExt> msgTreeMapTemp = new TreeMap<Long, MessageExt>();
     private final AtomicLong tryUnlockTimes = new AtomicLong(0);
     private volatile long queueOffsetMax = 0L;

@@ -327,6 +327,7 @@ public class HAService {
         private long lastWriteTimestamp = System.currentTimeMillis();
 
         private long currentReportedOffset = 0;
+        // dispatchPostion 是用来
         private int dispatchPostion = 0;
         private ByteBuffer byteBufferRead = ByteBuffer.allocate(READ_MAX_BUFFER_SIZE);
         private ByteBuffer byteBufferBackup = ByteBuffer.allocate(READ_MAX_BUFFER_SIZE);
@@ -352,6 +353,11 @@ public class HAService {
             return needHeart;
         }
 
+        /**
+         * 向 master 报告 commitOffset。
+         * @param maxOffset
+         * @return
+         */
         private boolean reportSlaveMaxOffset(final long maxOffset) {
             this.reportOffset.position(0);
             this.reportOffset.limit(8);
@@ -369,6 +375,7 @@ public class HAService {
                 }
             }
 
+            // 如果数据没有全写完，说明出错了
             return !this.reportOffset.hasRemaining();
         }
 
@@ -408,8 +415,10 @@ public class HAService {
 
         private boolean processReadEvent() {
             int readSizeZeroTimes = 0;
+            // 如果 byteBufferRead 还有空间可用，就从 channel 里读取数据
             while (this.byteBufferRead.hasRemaining()) {
                 try {
+                    // 从 channel 里读取数据
                     int readSize = this.socketChannel.read(this.byteBufferRead);
                     if (readSize > 0) {
                         lastWriteTimestamp = HAService.this.defaultMessageStore.getSystemClock().now();
@@ -457,14 +466,20 @@ public class HAService {
                         }
                     }
 
+                    // 如果读取到的数据大小 超过 一条数据完整数据的大小的话，就读取数据内容。
                     if (diff >= (msgHeaderSize + bodySize)) {
                         byte[] bodyData = new byte[bodySize];
                         this.byteBufferRead.position(this.dispatchPostion + msgHeaderSize);
+                        // 注意：如果 byteBufferRead 的数据不够填充 bodyData 的大小的话，就会抛出异常。
                         this.byteBufferRead.get(bodyData);
 
+                        // 把读取到的数据，写到 commitLog 里
                         HAService.this.defaultMessageStore.appendToCommitLog(masterPhyOffset, bodyData);
 
+                        // 把 byteBufferRead 的 position 恢复到初始状态。
+                        // 在整个处理中，是使用 dispatchPostion 做下一条数据的位置记录的。
                         this.byteBufferRead.position(readSocketPos);
+                        // 修改 dispatchPostion，生成下一条数据的初始位置
                         this.dispatchPostion += msgHeaderSize + bodySize;
 
                         if (!reportSlaveMaxOffsetPlus()) {
@@ -475,6 +490,7 @@ public class HAService {
                     }
                 }
 
+                // 如果 byteBufferRead 没有空间了，就交换
                 if (!this.byteBufferRead.hasRemaining()) {
                     this.reallocateByteBuffer();
                 }
@@ -560,6 +576,7 @@ public class HAService {
                         if (this.isTimeToReportOffset()) {
                             boolean result = this.reportSlaveMaxOffset(this.currentReportedOffset);
                             if (!result) {
+                                // 如果发送出错，就关闭连接
                                 this.closeMaster();
                             }
                         }

@@ -777,9 +777,11 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 case BROADCASTING:
                     break;
                 case CLUSTERING:
+                    // 创建当前 topic 的 retry topic
                     final String retryTopic = MixAll.getRetryTopic(this.defaultMQPushConsumer.getConsumerGroup());
                     SubscriptionData subscriptionData = FilterAPI.buildSubscriptionData(this.defaultMQPushConsumer.getConsumerGroup(), //
                         retryTopic, SubscriptionData.SUB_ALL);
+                    // 把 retry topic 加入到总结的 topic 集合中，稍后对 topic 集合里的 topic 发请求，取得消息。
                     this.rebalanceImpl.getSubscriptionInner().put(retryTopic, subscriptionData);
                     break;
                 default:

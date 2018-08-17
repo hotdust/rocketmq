@@ -41,6 +41,9 @@ public class Producer {
                 Message msg =
                     new Message("TopicTestjjj", tags[i % tags.length], "KEY" + i,
                         ("Hello RocketMQ " + i).getBytes(RemotingHelper.DEFAULT_CHARSET));
+                // send 最后一个参数 orderId 就是用来区分 queue 的参数。
+                // selector 里的最后一个参数 arg 就是 orderId，用 orderId 对 queue 的大小进行取模，
+                // 保证同一个 orderId 的消息发送到一个 queue 里
                 SendResult sendResult = producer.send(msg, new MessageQueueSelector() {
                     @Override
                     public MessageQueue select(List<MessageQueue> mqs, Message msg, Object arg) {
