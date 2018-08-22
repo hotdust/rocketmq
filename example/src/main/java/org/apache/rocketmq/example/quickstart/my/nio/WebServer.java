@@ -9,9 +9,10 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 public class WebServer {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         try {
             ServerSocketChannel ssc = ServerSocketChannel.open();
             ssc.socket().bind(new InetSocketAddress("127.0.0.1", 8000));
@@ -27,7 +28,13 @@ public class WebServer {
             writeBuff.flip();
 
             while (true) {
-                int nReady = selector.select();
+                int nReady = selector.select(1000);
+                System.out.println("sleep start");
+                System.out.println(System.currentTimeMillis());
+                TimeUnit.SECONDS.sleep(3);
+                System.out.println(System.currentTimeMillis());
+                System.out.println("sleep end");
+
                 Set<SelectionKey> keys = selector.selectedKeys();
                 Iterator<SelectionKey> it = keys.iterator();
 
@@ -47,20 +54,9 @@ public class WebServer {
                         readBuff.clear();
                         socketChannel.read(readBuff);
 
-                        // get long
-                        long aLong = readBuff.getLong(0);
-                        System.out.println(aLong);
-
-                        // set position and get data beyond rest buffer
-                        readBuff.position(30);
-                        byte[] buffer = new byte[10];
-                        readBuff.get(buffer);
-                        System.out.println("normal");
-
-
-//                        readBuff.flip();
-//                        System.out.println("received : " + new String(readBuff.array()));
-//                        key.interestOps(SelectionKey.OP_WRITE);
+                        readBuff.flip();
+                        System.out.println("received : " + new String(readBuff.array()));
+                        key.interestOps(SelectionKey.OP_WRITE);
                     }
                     else if (key.isWritable()) {
                         writeBuff.rewind();

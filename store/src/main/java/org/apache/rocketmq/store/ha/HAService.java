@@ -362,6 +362,7 @@ public class HAService {
             this.reportOffset.position(0);
             this.reportOffset.limit(8);
             this.reportOffset.putLong(maxOffset);
+            // 下面代码可不可以换成 reportOffset.flip()? 感觉作用相同。
             this.reportOffset.position(0);
             this.reportOffset.limit(8);
 
@@ -388,7 +389,9 @@ public class HAService {
         // }
 
         /**
-
+         * 交换 buffer 空间。
+         * 当一块空不够用时，把没处理完的数据，放到另一个空间的开始。
+         * 这么做比 ByteBuffer#compact 有什么好处？
          */
         private void reallocateByteBuffer() {
             int remain = READ_MAX_BUFFER_SIZE - this.dispatchPostion;
@@ -482,6 +485,7 @@ public class HAService {
                         // 修改 dispatchPostion，生成下一条数据的初始位置
                         this.dispatchPostion += msgHeaderSize + bodySize;
 
+                        // 向 maseter 报告自己的最大 commitLog offset
                         if (!reportSlaveMaxOffsetPlus()) {
                             return false;
                         }
@@ -501,6 +505,10 @@ public class HAService {
             return true;
         }
 
+        /**
+         * 向 master 报告最大的 commit log offset
+         * @return
+         */
         private boolean reportSlaveMaxOffsetPlus() {
             boolean result = true;
             long currentPhyOffset = HAService.this.defaultMessageStore.getMaxPhyOffset();
@@ -581,6 +589,8 @@ public class HAService {
                             }
                         }
 
+                        // 每 1 秒处理一次数据。就算还有数据也不读了，处理已经读到的数据。
+                        // 如果下面的处理比较慢，要等到下面处理完后，再进行 1 秒读取。
                         this.selector.select(1000);
 
                         boolean ok = this.processReadEvent();

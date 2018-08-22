@@ -4,9 +4,10 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.TimeUnit;
 
 public class WebClient {
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         try {
             SocketChannel socketChannel = SocketChannel.open();
             socketChannel.connect(new InetSocketAddress("127.0.0.1", 8000));
@@ -14,10 +15,7 @@ public class WebClient {
             ByteBuffer writeBuffer = ByteBuffer.allocate(32);
             ByteBuffer readBuffer = ByteBuffer.allocate(32);
 
-//            writeBuffer.put("hello".getBytes());
-            for (int i = 0; i < 32; i++) {
-                writeBuffer.put((byte) (i % 2));
-            }
+            writeBuffer.put("hello".getBytes());
             writeBuffer.flip();
 
             while (true) {
@@ -25,6 +23,8 @@ public class WebClient {
                 socketChannel.write(writeBuffer);
                 readBuffer.clear();
                 socketChannel.read(readBuffer);
+
+                TimeUnit.SECONDS.sleep(5);
             }
         } catch (IOException e) {
         }

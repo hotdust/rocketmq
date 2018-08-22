@@ -94,6 +94,7 @@ public class HAConnection {
             this.selector = RemotingUtil.openSelector();
             this.socketChannel = socketChannel;
             this.socketChannel.register(this.selector, SelectionKey.OP_READ);
+            // 设置守护线程。
             this.thread.setDaemon(true);
         }
 
@@ -169,6 +170,7 @@ public class HAConnection {
                             this.processPostion = pos;
 
                             HAConnection.this.slaveAckOffset = readOffset;
+                            // 通过从 Slave 发过来的 offset，更新`本地的 Slave offset`
                             if (HAConnection.this.slaveRequestOffset < 0) {
                                 HAConnection.this.slaveRequestOffset = readOffset;
                                 log.info("slave[" + HAConnection.this.clientAddr + "] request offset " + readOffset);
@@ -206,6 +208,7 @@ public class HAConnection {
         private final ByteBuffer byteBufferHeader = ByteBuffer.allocate(headerSize);
         private long nextTransferFromWhere = -1;
         private SelectMappedBufferResult selectMappedBufferResult;
+        // 上次数据传送是否完成
         private boolean lastWriteOver = true;
         private long lastWriteTimestamp = System.currentTimeMillis();
 
@@ -224,14 +227,18 @@ public class HAConnection {
                 try {
                     this.selector.select(1000);
 
+                    // 如果 slave 还没发过来请求（也就是 还没发送过来 offset），就等待
+                    // (slave 发送过来 offset 后，slaveRequestOffset 就不为负数了)
                     if (-1 == HAConnection.this.slaveRequestOffset) {
                         Thread.sleep(10);
                         continue;
                     }
 
+                    // 如果 nextTransferFromWhere 还末初始化，就初始化它。
                     if (-1 == this.nextTransferFromWhere) {
                         if (0 == HAConnection.this.slaveRequestOffset) {
                             long masterOffset = HAConnection.this.haService.getDefaultMessageStore().getCommitLog().getMaxOffset();
+                            // 计算后，masterOffset 变成"最后一个 MappedFile 初始位置"了
                             masterOffset =
                                 masterOffset
                                     - (masterOffset % HAConnection.this.haService.getDefaultMessageStore().getMessageStoreConfig()
@@ -250,14 +257,19 @@ public class HAConnection {
                             + "], and slave request " + HAConnection.this.slaveRequestOffset);
                     }
 
+                    // 如果上次传送完成的话
+                    // (启动后第一次执行时，lastWriteOver 就为 true，所以不执行 transferData() )
                     if (this.lastWriteOver) {
 
+                        // 距离上次写数据，是否已经过了一定时间，
                         long interval =
                             HAConnection.this.haService.getDefaultMessageStore().getSystemClock().now() - this.lastWriteTimestamp;
 
+                        // 如果时间到了发送心跳的间隔，就发送心跳。
                         if (interval > HAConnection.this.haService.getDefaultMessageStore().getMessageStoreConfig()
                             .getHaSendHeartbeatInterval()) {
 
+                            // 心跳只发送 8 字节的 header，body size 和 body 都为空
                             // Build Header
                             this.byteBufferHeader.position(0);
                             this.byteBufferHeader.limit(headerSize);
@@ -269,12 +281,14 @@ public class HAConnection {
                             if (!this.lastWriteOver)
                                 continue;
                         }
-                    } else {
+                    } else { // 如果上次传没完成，就再进行传送
                         this.lastWriteOver = this.transferData();
                         if (!this.lastWriteOver)
                             continue;
                     }
 
+                    // 上次传送完成情况，正常发下一次的数据。
+                    // 取得"从 nextTransferFromWhere 到目前所有的消息"
                     SelectMappedBufferResult selectResult =
                         HAConnection.this.haService.getDefaultMessageStore().getCommitLogData(this.nextTransferFromWhere);
                     if (selectResult != null) {
@@ -345,6 +359,8 @@ public class HAConnection {
                     writeSizeZeroTimes = 0;
                     this.lastWriteTimestamp = HAConnection.this.haService.getDefaultMessageStore().getSystemClock().now();
                 } else if (writeSize == 0) {
+                    // 当缓冲区满了时，写返回的 size 就为 0
+                    // 如果 3 次后还是 0，可能说明缓冲区紧张，就等一会再写。
                     if (++writeSizeZeroTimes >= 3) {
                         break;
                     }
@@ -353,6 +369,7 @@ public class HAConnection {
                 }
             }
 
+            // 如果要写的 body 为空，就返回 header 是否写成功
             if (null == this.selectMappedBufferResult) {
                 return !this.byteBufferHeader.hasRemaining();
             }
