@@ -29,11 +29,6 @@ public class WebServer {
 
             while (true) {
                 int nReady = selector.select(1000);
-                System.out.println("sleep start");
-                System.out.println(System.currentTimeMillis());
-                TimeUnit.SECONDS.sleep(3);
-                System.out.println(System.currentTimeMillis());
-                System.out.println("sleep end");
 
                 Set<SelectionKey> keys = selector.selectedKeys();
                 Iterator<SelectionKey> it = keys.iterator();

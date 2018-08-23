@@ -153,6 +153,9 @@ public class HAConnection {
         private boolean processReadEvent() {
             int readSizeZeroTimes = 0;
 
+            // 如果接收 buffer 满了，就清空数据。
+            // 因为从 slave 来的数据大小固定是 8 个字节，buffer 大小是 8 的倍数，
+            // 所以在读到了 buffer 里时，不存在多一个或少一个字节问题。
             if (!this.byteBufferRead.hasRemaining()) {
                 this.byteBufferRead.flip();
                 this.processPostion = 0;
@@ -160,6 +163,7 @@ public class HAConnection {
 
             while (this.byteBufferRead.hasRemaining()) {
                 try {
+                    // 通过 readSize 判断是否读取到数据
                     int readSize = this.socketChannel.read(this.byteBufferRead);
                     if (readSize > 0) {
                         readSizeZeroTimes = 0;
