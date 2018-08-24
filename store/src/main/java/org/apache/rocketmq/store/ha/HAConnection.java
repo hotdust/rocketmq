@@ -153,9 +153,7 @@ public class HAConnection {
         private boolean processReadEvent() {
             int readSizeZeroTimes = 0;
 
-            // 如果接收 buffer 满了，就清空数据。
-            // 因为从 slave 来的数据大小固定是 8 个字节，buffer 大小是 8 的倍数，
-            // 所以在读到了 buffer 里时，不存在多一个或少一个字节问题。
+            // 如果 byteBufferRead 满了，就清空数据。（为什么不使用 clear 呢？）
             if (!this.byteBufferRead.hasRemaining()) {
                 this.byteBufferRead.flip();
                 this.processPostion = 0;
@@ -168,6 +166,7 @@ public class HAConnection {
                     if (readSize > 0) {
                         readSizeZeroTimes = 0;
                         this.lastReadTimestamp = HAConnection.this.haService.getDefaultMessageStore().getSystemClock().now();
+                        // 如果从网络缓冲区读到的数据不够 offset 数据长度，就跳过处理，再进行读取。（进行粘包处理）
                         if ((this.byteBufferRead.position() - this.processPostion) >= 8) {
                             int pos = this.byteBufferRead.position() - (this.byteBufferRead.position() % 8);
                             long readOffset = this.byteBufferRead.getLong(pos - 8);

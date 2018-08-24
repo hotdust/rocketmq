@@ -46,8 +46,14 @@ public class WebServer {
                     }
                     else if (key.isReadable()) {
                         SocketChannel socketChannel = (SocketChannel) key.channel();
-                        readBuff.clear();
-                        socketChannel.read(readBuff);
+                        ByteBuffer buffer = ByteBuffer.allocate(2);
+                        buffer.clear();
+                        socketChannel.read(buffer);
+
+
+//                        SocketChannel socketChannel = (SocketChannel) key.channel();
+//                        readBuff.clear();
+//                        socketChannel.read(readBuff);
 
                         readBuff.flip();
                         System.out.println("received : " + new String(readBuff.array()));
