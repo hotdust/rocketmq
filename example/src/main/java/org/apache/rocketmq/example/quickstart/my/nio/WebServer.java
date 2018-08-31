@@ -28,7 +28,7 @@ public class WebServer {
             writeBuff.flip();
 
             while (true) {
-                int nReady = selector.select(1000);
+                int nReady = selector.select();
 
                 Set<SelectionKey> keys = selector.selectedKeys();
                 Iterator<SelectionKey> it = keys.iterator();

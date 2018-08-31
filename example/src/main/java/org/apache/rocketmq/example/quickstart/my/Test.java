@@ -20,11 +20,7 @@ public class Test {
 //        System.out.println("complete");
 
 
-        ByteBuffer buffer = ByteBuffer.allocate(8);
-        long data = 128;
-        buffer.putLong(data);
-
-        System.out.println("position:" + buffer.position() + ", limit:" + buffer.limit());
+        System.out.println(System.getProperty("os.name"));
 
     }
 }

@@ -261,7 +261,7 @@ public class HAConnection {
                     }
 
                     // 如果上次传送完成的话
-                    // (启动后第一次执行时，lastWriteOver 就为 true，所以不执行 transferData() )
+                    // (启动后第一次执行时，lastWriteOver 就为 true)
                     if (this.lastWriteOver) {
 
                         // 距离上次写数据，是否已经过了一定时间，
