@@ -151,6 +151,7 @@ public class DefaultMessageStore implements MessageStore {
         boolean result = true;
 
         try {
+            // 如果 abort 文件不存在，就是异常关闭
             boolean lastExitOK = !this.isTempFileExist();
             log.info("last shutdown {}", lastExitOK ? "normally" : "abnormally");
 
@@ -159,12 +160,15 @@ public class DefaultMessageStore implements MessageStore {
             }
 
             // load Commit Log
+            // 生成 commit log，并打开对应的文件
             result = result && this.commitLog.load();
 
             // load Consume Queue
+            // 生成 Consume Queue 结构，并打开对应的文件
             result = result && this.loadConsumeQueue();
 
             if (result) {
+                // 提取 checkPoint
                 this.storeCheckpoint =
                     new StoreCheckpoint(StorePathConfigHelper.getStoreCheckpoint(this.messageStoreConfig.getStorePathRootDir()));
 
@@ -1206,14 +1210,17 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     private void recover(final boolean lastExitOK) {
+        // 恢复 consume queue
         this.recoverConsumeQueue();
 
+        // 恢复 commit log
         if (lastExitOK) {
             this.commitLog.recoverNormally();
         } else {
             this.commitLog.recoverAbnormally();
         }
 
+        // 恢复 topic queue
         this.recoverTopicQueueTable();
     }
 
@@ -1295,6 +1302,7 @@ public class DefaultMessageStore implements MessageStore {
         switch (tranType) {
             case MessageSysFlag.TRANSACTION_NOT_TYPE:
             case MessageSysFlag.TRANSACTION_COMMIT_TYPE:
+                // 创建 consume queue
                 DefaultMessageStore.this.putMessagePositionInfo(req.getTopic(), req.getQueueId(), req.getCommitLogOffset(), req.getMsgSize(),
                     req.getTagsCode(), req.getStoreTimestamp(), req.getConsumeQueueOffset());
                 break;
@@ -1303,6 +1311,7 @@ public class DefaultMessageStore implements MessageStore {
                 break;
         }
 
+        // 创建 index
         if (DefaultMessageStore.this.getMessageStoreConfig().isMessageIndexEnable()) {
             DefaultMessageStore.this.indexService.buildIndex(req);
         }

@@ -416,10 +416,13 @@ public class CommitLog {
         final List<MappedFile> mappedFiles = this.mappedFileQueue.getMappedFiles();
         if (!mappedFiles.isEmpty()) {
             // Looking beginning to recover from which file
+            // 取得最后一个文件的 index，重后向前恢复
+            // 因为是异常恢复，所以不知道数据写到哪了，从最后一个向前找
             int index = mappedFiles.size() - 1;
             MappedFile mappedFile = null;
             for (; index >= 0; index--) {
                 mappedFile = mappedFiles.get(index);
+                // 找到需要恢复的那个文件
                 if (this.isMappedFileMatchedRecover(mappedFile)) {
                     log.info("recover from this maped file " + mappedFile.getFileName());
                     break;
@@ -432,6 +435,7 @@ public class CommitLog {
             }
 
             ByteBuffer byteBuffer = mappedFile.sliceByteBuffer();
+            // 取得 mappedFile 初始 offset
             long processOffset = mappedFile.getFileFromOffset();
             long mappedFileOffset = 0;
             while (true) {
@@ -451,6 +455,7 @@ public class CommitLog {
                     }
                 }
                 // Intermediate file read error
+                // 如果 size 为 -1，就停止恢复，以当前读到的 commit log offset 为正常数据起点。
                 else if (size == -1) {
                     log.info("recover physics file end, " + mappedFile.getFileName());
                     break;
@@ -458,14 +463,19 @@ public class CommitLog {
                 // Come the end of the file, switch to the next file
                 // Since the return 0 representatives met last hole, this can
                 // not be included in truncate offset
+                // 如果 size == 0，说明当前消息是"空白消息"。
+                // 空白消息：mappedFile 剩余空间不够保存一条消息，而生成的空白消息。
+                // 实际上是使用 BLANK_MAGIC_CODE 来判断是不是空白消息。
                 else if (size == 0) {
                     index++;
+                    // 如果 index >= size，说明所有 mappedFile 都已经恢复完了
                     if (index >= mappedFiles.size()) {
                         // The current branch under normal circumstances should
                         // not happen
                         log.info("recover physics file over, last maped file " + mappedFile.getFileName());
                         break;
                     } else {
+                        // 恢复下一个 mappedFile 做前期准备
                         mappedFile = mappedFiles.get(index);
                         byteBuffer = mappedFile.sliceByteBuffer();
                         processOffset = mappedFile.getFileFromOffset();
@@ -478,6 +488,8 @@ public class CommitLog {
             processOffset += mappedFileOffset;
             this.mappedFileQueue.setFlushedWhere(processOffset);
             this.mappedFileQueue.setCommittedWhere(processOffset);
+            // 删除大于"恢复后最大 offset"的 CommitLog 的 MappedFile。
+            // 因为很多方法在取得最大 offset 时，是从最后一个 MappedFile 取得，所以不得不删除。
             this.mappedFileQueue.truncateDirtyFiles(processOffset);
 
             // Clear ConsumeQueue redundant data
@@ -487,6 +499,7 @@ public class CommitLog {
         else {
             this.mappedFileQueue.setFlushedWhere(0);
             this.mappedFileQueue.setCommittedWhere(0);
+            // 删除相关的 consume queue
             this.defaultMessageStore.destroyLogics();
         }
     }
@@ -494,16 +507,21 @@ public class CommitLog {
     private boolean isMappedFileMatchedRecover(final MappedFile mappedFile) {
         ByteBuffer byteBuffer = mappedFile.sliceByteBuffer();
 
+        // 如果第一条消息的 magic code 不对的话，这个文件应该都不是正常文件，跳过这个文件。
         int magicCode = byteBuffer.getInt(MessageDecoder.MESSAGE_MAGIC_CODE_POSTION);
         if (magicCode != MESSAGE_MAGIC_CODE) {
             return false;
         }
 
+        // 如果第一条消息的"时间戳"不对，也说明这个文件应该都不是正常文件，跳过这个文件。
         long storeTimestamp = byteBuffer.getLong(MessageDecoder.MESSAGE_STORE_TIMESTAMP_POSTION);
         if (0 == storeTimestamp) {
             return false;
         }
 
+        // 如果"Index"功能开启，并且是安全Index（不太明白这个"安全Index"）
+        // 就查看 CheckPoint 中 commit log、consume queue、Index 最小的那个时间戳 是否大于
+        // 第一条记录的时间戳。
         if (this.defaultMessageStore.getMessageStoreConfig().isMessageIndexEnable()//
             && this.defaultMessageStore.getMessageStoreConfig().isMessageIndexSafe()) {
             if (storeTimestamp <= this.defaultMessageStore.getStoreCheckpoint().getMinTimestampIndex()) {
@@ -513,6 +531,8 @@ public class CommitLog {
                 return true;
             }
         } else {
+            // 查看 CheckPoint 中 commit log、consume queue 最小的那个时间戳 是否大于
+            // 第一条记录的时间戳。
             if (storeTimestamp <= this.defaultMessageStore.getStoreCheckpoint().getMinTimestamp()) {
                 log.info("find check timestamp, {} {}", //
                     storeTimestamp, //

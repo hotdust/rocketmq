@@ -63,6 +63,9 @@ public class IndexService {
                     IndexFile f = new IndexFile(file.getPath(), this.hashSlotNum, this.indexNum, 0, 0);
                     f.load();
 
+                    // 如果异常关闭，就要检查一下文件是否合法。
+                    // 如果文件的结束时间戳 >= Index 的 CheckPoint 时间戳，
+                    // 说明文件不合法，就把文件删除掉
                     if (!lastExitOK) {
                         if (f.getEndTimestamp() > this.defaultMessageStore.getStoreCheckpoint()
                             .getIndexMsgTimestamp()) {

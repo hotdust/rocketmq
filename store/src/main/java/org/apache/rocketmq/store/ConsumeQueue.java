@@ -82,6 +82,7 @@ public class ConsumeQueue {
             MappedFile mappedFile = mappedFiles.get(index);
             ByteBuffer byteBuffer = mappedFile.sliceByteBuffer();
             long processOffset = mappedFile.getFileFromOffset();
+            // 保存恢复到具体的 consume queue 中数据的 offset（这个 offset 是每次移动 consume queue 数据的大小）
             long mappedFileOffset = 0;
             while (true) {
                 for (int i = 0; i < mappedFileSizeLogics; i += CQ_STORE_UNIT_SIZE) {
@@ -99,6 +100,9 @@ public class ConsumeQueue {
                     }
                 }
 
+                // 如果 mappedFileOffset 增大到"每个 consume queue 文件大小"
+                // 说明这个文件已经读取完成，要读取下一个文件了。
+                // （mappedFileOffset 是对每个文件 offset 计数，所以读完后要清0）
                 if (mappedFileOffset == mappedFileSizeLogics) {
                     index++;
                     if (index >= mappedFiles.size()) {
@@ -198,6 +202,11 @@ public class ConsumeQueue {
         return 0;
     }
 
+    /**
+     * 如果"第一个元素的 offset 就大于 CommitLog offset"，就把这个文件删除
+     * 如果不大于，就设置 consume queue 的 WrotePosition 等变量
+     * @param phyOffet
+     */
     public void truncateDirtyLogicFiles(long phyOffet) {
 
         int logicFileSize = this.mappedFileSize;

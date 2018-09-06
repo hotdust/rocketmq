@@ -102,17 +102,24 @@ public class MappedFileQueue {
         return mfs;
     }
 
+    /**
+     * offset 为 consume queue 最大的
+     * @param offset
+     */
     public void truncateDirtyFiles(long offset) {
         List<MappedFile> willRemoveFiles = new ArrayList<MappedFile>();
 
         for (MappedFile file : this.mappedFiles) {
             long fileTailOffset = file.getFileFromOffset() + this.mappedFileSize;
+            // 一般来说，只有最后一个 mappedFile 的 fileTailOffset 比 offset 大
             if (fileTailOffset > offset) {
                 if (offset >= file.getFileFromOffset()) {
                     file.setWrotePosition((int) (offset % this.mappedFileSize));
                     file.setCommittedPosition((int) (offset % this.mappedFileSize));
                     file.setFlushedPosition((int) (offset % this.mappedFileSize));
                 } else {
+                    // 在什么场景下，会出现这种情况？
+                    // 因为 offset 是通过 mappedFiles 算出来的，怎么会出现这种情况呢？
                     file.destroy(1000);
                     willRemoveFiles.add(file);
                 }
@@ -152,7 +159,8 @@ public class MappedFileQueue {
             // ascending order
             Arrays.sort(files);
             for (File file : files) {
-
+                // 如果文件长度 != 配置的文件大小的话，就忽略这个文件
+                // 之前还想，如果运行一段时间后，修改了 broker 的文件大小配置，会如何处理呢？
                 if (file.length() != this.mappedFileSize) {
                     log.warn(file + "\t" + file.length()
                         + " length not matched message store config value, ignore it");
@@ -160,6 +168,7 @@ public class MappedFileQueue {
                 }
 
                 try {
+                    // 初始化 MappedFile，并加入 MappedQueue 中
                     MappedFile mappedFile = new MappedFile(file.getPath(), mappedFileSize);
 
                     mappedFile.setWrotePosition(this.mappedFileSize);
