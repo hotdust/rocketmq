@@ -103,7 +103,7 @@ public class MappedFileQueue {
     }
 
     /**
-     * offset 为 consume queue 最大的
+     * offset 为 可能为 comsume queue offset 或 commit log offset 等，根据调用方不同，性质不同。
      * @param offset
      */
     public void truncateDirtyFiles(long offset) {

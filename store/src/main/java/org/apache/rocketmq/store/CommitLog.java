@@ -177,15 +177,20 @@ public class CommitLog {
             long processOffset = mappedFile.getFileFromOffset();
             long mappedFileOffset = 0;
             while (true) {
+                // 对数据进行 check
                 DispatchRequest dispatchRequest = this.checkMessageAndReturnSize(byteBuffer, checkCRCOnRecover);
                 int size = dispatchRequest.getMsgSize();
                 // Normal data
+                // 正常数据
                 if (dispatchRequest.isSuccess() && size > 0) {
                     mappedFileOffset += size;
                 }
                 // Come the end of the file, switch to the next file Since the
                 // return 0 representatives met last hole,
                 // this can not be included in truncate offset
+                // 如果 size == 0，说明当前消息是"空白消息"。
+                // 空白消息：mappedFile 剩余空间不够保存一条消息，而生成的空白消息。
+                // 实际上是使用 BLANK_MAGIC_CODE 来判断是不是空白消息。
                 else if (dispatchRequest.isSuccess() && size == 0) {
                     index++;
                     if (index >= mappedFiles.size()) {
@@ -201,6 +206,7 @@ public class CommitLog {
                     }
                 }
                 // Intermediate file read error
+                // 遇到异常数据，就停止恢复
                 else if (!dispatchRequest.isSuccess()) {
                     log.info("recover physics file end, " + mappedFile.getFileName());
                     break;
@@ -228,6 +234,11 @@ public class CommitLog {
 
     /**
      * check the message and returns the message size
+     *
+     * 三种关于是否是异常数据的判断：
+     * - 如果 MagicCode 部分不是指定的两种，就是异常数据。
+     * - 如果 CRC 检验不过
+     * - 如果读取的数据中的 size 字段值 != 正常数据长度
      *
      * @return 0 Come the end of the file // >0 Normal messages // -1 Message checksum failure
      */
