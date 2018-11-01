@@ -1249,8 +1249,6 @@ public class CommitLog {
                 // TODO Q: 18/5/10 这个 BLANK_MAGIC_CODE 是干什么用的？
                 this.msgStoreItemMemory.putInt(CommitLog.BLANK_MAGIC_CODE);
                 // 3 The remaining space may be any value
-                //
-
                 // Here the length of the specially set maxBlank
                 final long beginTimeMills = CommitLog.this.defaultMessageStore.now();
                 byteBuffer.put(this.msgStoreItemMemory.array(), 0, maxBlank);
