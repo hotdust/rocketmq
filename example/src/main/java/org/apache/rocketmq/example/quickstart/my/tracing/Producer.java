@@ -53,15 +53,15 @@ public class Producer {
                 ("Hello RocketMQ Tag:normal").getBytes(RemotingHelper.DEFAULT_CHARSET) /* Message body */
         );
 
-
-        Field propsField = msg.getClass().getDeclaredField("properties");
-        propsField.setAccessible(true);
-        System.out.println("propsField.getName(): " + propsField.getName());
-        Object propsObj = propsField.get(msg);
-        if( propsObj instanceof Map ) {
-            Map<String, String> propsMap = (Map<String, String>) propsObj;
-            propsMap.put("tracing", "tracing success");
-        }
+        msg.putUserProperty("tracing", "tracing success");
+//        Field propsField = msg.getClass().getDeclaredField("properties");
+//        propsField.setAccessible(true);
+//        System.out.println("propsField.getName(): " + propsField.getName());
+//        Object propsObj = propsField.get(msg);
+//        if( propsObj instanceof Map ) {
+//            Map<String, String> propsMap = (Map<String, String>) propsObj;
+//            propsMap.put("tracing", "tracing success");
+//        }
 
         try {
             producer.send(msg);
